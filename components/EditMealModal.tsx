@@ -7,8 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { Checkbox } from '@/components/ui/checkbox'
-import { Lock, Globe, Loader2 } from 'lucide-react'
+import { Globe, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 
 type EditMealModalProps = {
@@ -199,23 +198,31 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
             </div>
 
             {/* Privacy */}
-            <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border">
-              <Checkbox
-                id="edit-private"
-                checked={formData.is_private}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_private: checked as boolean })}
-              />
-              <div className="flex-1">
-                <Label htmlFor="edit-private" className="text-sm font-medium flex items-center gap-2 cursor-pointer">
-                  {formData.is_private ? <Lock className="h-4 w-4 text-gray-600" /> : <Globe className="h-4 w-4 text-green-600" />}
-                  {formData.is_private ? 'Private' : 'Public'} Meal
-                </Label>
-                <p className="text-xs text-gray-500 mt-1">
-                  {formData.is_private
-                    ? 'Only you can see this meal'
-                    : 'Other users can see and use this meal in their plans'}
-                </p>
+            <div className="p-4 bg-gray-50 rounded-lg border">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-green-600" />
+                  <Label className="text-sm font-medium">Public Meal</Label>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setFormData({ ...formData, is_private: !formData.is_private })}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                    !formData.is_private ? 'bg-green-600' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      !formData.is_private ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
               </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {!formData.is_private
+                  ? 'Other users can see and use this meal in their plans'
+                  : 'Only you can see this meal'}
+              </p>
             </div>
           </div>
         )}
