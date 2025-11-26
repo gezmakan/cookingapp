@@ -21,27 +21,24 @@ type User = {
   id: string
   email: string
   created_at: string
-  exercise_count: number
+  meal_count: number
 }
 
-type Exercise = {
+type Meal = {
   id: string
   name: string
-  sets: number
-  reps: string
+  cuisine_type: string | null
+  ingredients: string | null
+  instructions: string | null
   video_url: string | null
-  muscle_groups: string | null
-  rest_minutes: number
-  rest_seconds: number
-  is_private: boolean
-  user_id: string | null
+  user_id: string
   created_at: string
   user_email: string | null
 }
 
 export default function AdminPage() {
   const [users, setUsers] = useState<User[]>([])
-  const [exercises, setExercises] = useState<Exercise[]>([])
+  const [meals, setMeals] = useState<Meal[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; title: string } | null>(null)
   const [currentUser, setCurrentUser] = useState<any>(null)
@@ -56,44 +53,46 @@ export default function AdminPage() {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user || !isAdmin(user.email)) {
-      router.push('/exercises')
+      router.push('/meals')
       return
     }
 
     setCurrentUser(user)
-    await Promise.all([fetchUsers(), fetchAllExercises()])
+    await Promise.all([
+      fetchUsers(),
+      fetchAllMeals()
+    ])
     setIsLoading(false)
   }
 
   const fetchUsers = async () => {
     try {
-      // Get all users with their exercise counts
-      const { data: usersData, error: usersError } = await supabase
-        .from('exercises')
+      const { data: mealsData, error } = await supabase
+        .from('meals')
         .select('user_id')
 
-      if (usersError) throw usersError
+      if (error) throw error
 
-      // Count exercises per user
-      const userExerciseCounts: Record<string, number> = {}
-      usersData?.forEach((ex) => {
-        if (ex.user_id) {
-          userExerciseCounts[ex.user_id] = (userExerciseCounts[ex.user_id] || 0) + 1
+      // Count meals per user
+      const userMealCounts: { [key: string]: number } = {}
+      mealsData?.forEach(meal => {
+        if (meal.user_id) {
+          userMealCounts[meal.user_id] = (userMealCounts[meal.user_id] || 0) + 1
         }
       })
 
       // Get current user info
       const { data: { user: currentUser } } = await supabase.auth.getUser()
 
-      // For now, we'll show the current user if they have exercises
+      // For now, we'll show the current user if they have meals
       const usersList: User[] = []
 
-      if (currentUser && userExerciseCounts[currentUser.id]) {
+      if (currentUser && userMealCounts[currentUser.id]) {
         usersList.push({
           id: currentUser.id,
           email: currentUser.email || 'Unknown',
           created_at: currentUser.created_at || new Date().toISOString(),
-          exercise_count: userExerciseCounts[currentUser.id]
+          meal_count: userMealCounts[currentUser.id]
         })
       }
 
@@ -103,10 +102,10 @@ export default function AdminPage() {
     }
   }
 
-  const fetchAllExercises = async () => {
+  const fetchAllMeals = async () => {
     try {
       const { data, error } = await supabase
-        .from('exercises')
+        .from('meals')
         .select('*')
         .order('created_at', { ascending: false })
 
@@ -116,146 +115,124 @@ export default function AdminPage() {
       const { data: { user: currentUser } } = await supabase.auth.getUser()
 
       // Add user email info
-      const exercisesWithUsers = data?.map(ex => ({
-        ...ex,
-        user_email: ex.user_id
-          ? (currentUser?.id === ex.user_id ? currentUser?.email : ex.user_id.substring(0, 8) + '...')
-          : 'Public'
-      }))
+      const mealsWithUsers = data?.map(meal => ({
+        ...meal,
+        user_email: meal.user_id === currentUser?.id ? currentUser.email : 'Unknown'
+      })) || []
 
-      setExercises(exercisesWithUsers || [])
+      setMeals(mealsWithUsers)
     } catch (error) {
-      console.error('Error fetching exercises:', error)
+      console.error('Error fetching meals:', error)
     }
   }
 
-  const handleDeleteExercise = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this exercise?')) return
+  const deleteMeal = async (mealId: string) => {
+    if (!confirm('Are you sure you want to delete this meal?')) return
 
     try {
       const { error } = await supabase
-        .from('exercises')
+        .from('meals')
         .delete()
-        .eq('id', id)
+        .eq('id', mealId)
 
       if (error) throw error
-      await fetchAllExercises()
+
+      await fetchAllMeals()
       await fetchUsers()
     } catch (error) {
-      console.error('Error deleting exercise:', error)
-      alert('Failed to delete exercise')
+      console.error('Error deleting meal:', error)
+      alert('Failed to delete meal')
     }
   }
 
   if (isLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
+        <p className="text-gray-600">Loading admin panel...</p>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 md:p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex justify-between items-center mb-4 md:mb-8 p-4 md:p-0">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold">Admin Dashboard</h1>
-            <p className="text-gray-600 mt-1 text-sm md:text-base">Manage users and exercises</p>
-          </div>
-          <Button variant="outline" onClick={() => router.push('/exercises')} size="sm" className="md:h-10">
-            <ArrowLeft className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Back to Exercises</span>
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
+      <div className="container mx-auto px-4 py-8 max-w-7xl">
+        <div className="mb-6">
+          <Button
+            variant="ghost"
+            onClick={() => router.push('/meals')}
+            className="mb-4"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Meals
           </Button>
+          <h1 className="text-3xl font-bold text-gray-900">Admin Panel</h1>
+          <p className="text-gray-600 mt-2">Manage users and meals</p>
         </div>
 
-        <Tabs defaultValue="exercises" className="space-y-4">
-          <TabsList className="mx-4 md:mx-0">
-            <TabsTrigger value="exercises">Exercises</TabsTrigger>
+        <Tabs defaultValue="meals" className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="meals">All Meals</TabsTrigger>
             <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="stats">Statistics</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="exercises" className="space-y-4">
-            <div className="bg-white md:rounded-lg border-y md:border">
-              <div className="p-4 border-b">
-                <h2 className="text-lg font-semibold">All Exercises</h2>
-                <p className="text-sm text-gray-600">Manage all public and private exercises</p>
-              </div>
+          <TabsContent value="meals">
+            <div className="bg-white rounded-lg shadow overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>
-                    <TableHead>Sets</TableHead>
-                    <TableHead>Reps</TableHead>
-                    <TableHead>Muscle Groups</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Created By</TableHead>
+                    <TableHead>Cuisine</TableHead>
+                    <TableHead>User</TableHead>
+                    <TableHead>Video</TableHead>
+                    <TableHead>Created</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {exercises.map((exercise) => (
-                    <TableRow key={exercise.id}>
-                      <TableCell className="font-medium">
-                        {exercise.video_url ? (
-                          <button
-                            onClick={() => setSelectedVideo({ url: exercise.video_url!, title: exercise.name })}
-                            className="text-blue-600 hover:text-blue-800 hover:underline text-left"
-                          >
-                            {exercise.name}
-                          </button>
-                        ) : (
-                          exercise.name
-                        )}
-                      </TableCell>
-                      <TableCell>{exercise.sets}</TableCell>
-                      <TableCell>{exercise.reps}</TableCell>
-                      <TableCell>{exercise.muscle_groups || '-'}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 text-xs rounded ${exercise.is_private ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'}`}>
-                          {exercise.is_private ? 'Private' : 'Public'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-xs text-gray-500">
-                        {exercise.user_email}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteExercise(exercise.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-red-600" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="users" className="space-y-4">
-            <div className="bg-white md:rounded-lg border-y md:border">
-              <div className="p-4 border-b">
-                <h2 className="text-lg font-semibold">Users</h2>
-                <p className="text-sm text-gray-600">View all registered users</p>
-              </div>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>User ID</TableHead>
-                    <TableHead>Exercises Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {users.length === 0 ? (
+                  {meals.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center text-gray-500">
-                        No users with exercises found
+                      <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                        No meals found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    users.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell className="font-mono text-sm">{user.email}</TableCell>
-                        <TableCell>{user.exercise_count}</TableCell>
+                    meals.map((meal) => (
+                      <TableRow key={meal.id}>
+                        <TableCell className="font-medium">{meal.name}</TableCell>
+                        <TableCell>
+                          {meal.cuisine_type && (
+                            <span className="bg-orange-100 text-orange-700 px-2 py-1 rounded-full text-xs">
+                              {meal.cuisine_type}
+                            </span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {meal.user_email}
+                        </TableCell>
+                        <TableCell>
+                          {meal.video_url && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setSelectedVideo({ url: meal.video_url!, title: meal.name })}
+                            >
+                              <Video className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {new Date(meal.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteMeal(meal.id)}
+                            className="text-red-600 hover:text-red-700"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -264,28 +241,36 @@ export default function AdminPage() {
             </div>
           </TabsContent>
 
-          <TabsContent value="stats" className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 md:px-0">
-              <div className="bg-white md:rounded-lg border-y md:border p-6">
-                <h3 className="text-sm font-medium text-gray-600">Total Exercises</h3>
-                <p className="text-3xl font-bold mt-2">{exercises.length}</p>
-              </div>
-              <div className="bg-white md:rounded-lg border-y md:border p-6">
-                <h3 className="text-sm font-medium text-gray-600">Public Exercises</h3>
-                <p className="text-3xl font-bold mt-2">
-                  {exercises.filter(e => !e.is_private).length}
-                </p>
-              </div>
-              <div className="bg-white md:rounded-lg border-y md:border p-6">
-                <h3 className="text-sm font-medium text-gray-600">Private Exercises</h3>
-                <p className="text-3xl font-bold mt-2">
-                  {exercises.filter(e => e.is_private).length}
-                </p>
-              </div>
-              <div className="bg-white md:rounded-lg border-y md:border p-6">
-                <h3 className="text-sm font-medium text-gray-600">Users with Exercises</h3>
-                <p className="text-3xl font-bold mt-2">{users.length}</p>
-              </div>
+          <TabsContent value="users">
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Meals</TableHead>
+                    <TableHead>Joined</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {users.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center text-gray-500 py-8">
+                        No users with meals found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    users.map((user) => (
+                      <TableRow key={user.id}>
+                        <TableCell className="font-medium">{user.email}</TableCell>
+                        <TableCell>{user.meal_count}</TableCell>
+                        <TableCell className="text-sm text-gray-600">
+                          {new Date(user.created_at).toLocaleDateString()}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </TabsContent>
         </Tabs>
@@ -293,10 +278,9 @@ export default function AdminPage() {
 
       {selectedVideo && (
         <VideoModal
-          isOpen={!!selectedVideo}
-          onClose={() => setSelectedVideo(null)}
-          videoUrl={selectedVideo.url}
+          url={selectedVideo.url}
           title={selectedVideo.title}
+          onClose={() => setSelectedVideo(null)}
         />
       )}
     </div>
