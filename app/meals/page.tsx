@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Plus, Edit, Video, Search, ArrowUpDown, Lock, Globe } from 'lucide-react'
 import VideoModal from '@/components/VideoModal'
+import EditMealModal from '@/components/EditMealModal'
 import Footer from '@/components/Footer'
 import Navbar from '@/components/Navbar'
+import { Toaster } from '@/components/ui/sonner'
 
 type Meal = {
   id: string
@@ -297,6 +299,17 @@ export default function MealsPage() {
           title={selectedVideo.title}
         />
       )}
+
+      {editingMealId && (
+        <EditMealModal
+          isOpen={!!editingMealId}
+          onClose={() => setEditingMealId(null)}
+          mealId={editingMealId}
+          onSuccess={fetchMeals}
+        />
+      )}
+
+      <Toaster />
     </div>
   )
 }

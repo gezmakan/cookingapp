@@ -1,0 +1,256 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { createClient } from '@/lib/supabase/client'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Lock, Globe, Loader2 } from 'lucide-react'
+import { toast } from 'sonner'
+
+type EditMealModalProps = {
+  isOpen: boolean
+  onClose: () => void
+  mealId: string
+  onSuccess: () => void
+}
+
+export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: EditMealModalProps) {
+  const supabase = createClient()
+  const [formData, setFormData] = useState({
+    name: '',
+    ingredients: '',
+    instructions: '',
+    video_url: '',
+    cuisine_type: '',
+    is_private: false,
+  })
+  const [isLoading, setIsLoading] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  useEffect(() => {
+    if (isOpen && mealId) {
+      fetchMeal()
+    }
+  }, [isOpen, mealId])
+
+  const fetchMeal = async () => {
+    setIsLoading(true)
+    try {
+      const { data, error } = await supabase
+        .from('meals')
+        .select('*')
+        .eq('id', mealId)
+        .single()
+
+      if (error) throw error
+
+      if (data) {
+        setFormData({
+          name: data.name || '',
+          ingredients: data.ingredients || '',
+          instructions: data.instructions || '',
+          video_url: data.video_url || '',
+          cuisine_type: data.cuisine_type || '',
+          is_private: data.is_private || false,
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching meal:', error)
+      toast.error('Failed to load meal')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) {
+      toast.error('Meal name is required')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const { error } = await supabase
+        .from('meals')
+        .update({
+          name: formData.name.trim(),
+          ingredients: formData.ingredients.trim() || null,
+          instructions: formData.instructions.trim() || null,
+          video_url: formData.video_url.trim() || null,
+          cuisine_type: formData.cuisine_type.trim() || null,
+          is_private: formData.is_private,
+        })
+        .eq('id', mealId)
+
+      if (error) throw error
+
+      toast.success('Meal updated successfully!')
+      onSuccess()
+      onClose()
+    } catch (error: any) {
+      console.error('Error updating meal:', error)
+      toast.error(error.message || 'Failed to update meal')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this meal? This action cannot be undone.')) {
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      const { error } = await supabase
+        .from('meals')
+        .delete()
+        .eq('id', mealId)
+
+      if (error) throw error
+
+      toast.success('Meal deleted successfully!')
+      onSuccess()
+      onClose()
+    } catch (error: any) {
+      console.error('Error deleting meal:', error)
+      toast.error(error.message || 'Failed to delete meal')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Edit Meal</DialogTitle>
+        </DialogHeader>
+
+        {isLoading ? (
+          <div className="py-12 text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-orange-600" />
+            <p className="text-gray-600">Loading meal...</p>
+          </div>
+        ) : (
+          <div className="space-y-4 py-4">
+            {/* Name */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-name">Meal Name *</Label>
+              <Input
+                id="edit-name"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="e.g., Chicken Tikka Masala"
+              />
+            </div>
+
+            {/* Cuisine Type */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-cuisine">Cuisine Type</Label>
+              <Input
+                id="edit-cuisine"
+                value={formData.cuisine_type}
+                onChange={(e) => setFormData({ ...formData, cuisine_type: e.target.value })}
+                placeholder="e.g., Indian, Italian, Mexican"
+              />
+            </div>
+
+            {/* Ingredients */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-ingredients">Ingredients</Label>
+              <Textarea
+                id="edit-ingredients"
+                value={formData.ingredients}
+                onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
+                placeholder="List ingredients..."
+                rows={4}
+                className="font-mono text-sm"
+              />
+            </div>
+
+            {/* Instructions */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-instructions">Instructions</Label>
+              <Textarea
+                id="edit-instructions"
+                value={formData.instructions}
+                onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
+                placeholder="Step-by-step cooking instructions..."
+                rows={4}
+              />
+            </div>
+
+            {/* Video URL */}
+            <div className="space-y-2">
+              <Label htmlFor="edit-video">YouTube Video Link</Label>
+              <Input
+                id="edit-video"
+                type="url"
+                value={formData.video_url}
+                onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
+                placeholder="https://youtube.com/watch?v=..."
+              />
+            </div>
+
+            {/* Privacy */}
+            <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border">
+              <Checkbox
+                id="edit-private"
+                checked={formData.is_private}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_private: checked as boolean })}
+              />
+              <div className="flex-1">
+                <Label htmlFor="edit-private" className="text-sm font-medium flex items-center gap-2 cursor-pointer">
+                  {formData.is_private ? <Lock className="h-4 w-4 text-gray-600" /> : <Globe className="h-4 w-4 text-green-600" />}
+                  {formData.is_private ? 'Private' : 'Public'} Meal
+                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  {formData.is_private
+                    ? 'Only you can see this meal'
+                    : 'Other users can see and use this meal in their plans'}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={isLoading || isSaving || isDeleting}
+            className="mr-auto"
+          >
+            {isDeleting ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )}
+          </Button>
+          <Button variant="outline" onClick={onClose} disabled={isSaving || isDeleting}>
+            Cancel
+          </Button>
+          <Button onClick={handleSave} disabled={isLoading || isSaving || isDeleting}>
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
