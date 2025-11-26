@@ -7,7 +7,8 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft } from 'lucide-react'
+import { Checkbox } from '@/components/ui/checkbox'
+import { ArrowLeft, Lock, Globe } from 'lucide-react'
 import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
 import Navbar from '@/components/Navbar'
@@ -19,6 +20,7 @@ export default function AddMealPage() {
   const [instructions, setInstructions] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [cuisineType, setCuisineType] = useState('')
+  const [isPrivate, setIsPrivate] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const router = useRouter()
   const supabase = createClient()
@@ -51,6 +53,7 @@ export default function AddMealPage() {
           instructions: instructions.trim() || null,
           video_url: videoUrl.trim() || null,
           cuisine_type: cuisineType.trim() || null,
+          is_private: isPrivate,
         })
 
       if (error) throw error
@@ -161,6 +164,26 @@ export default function AddMealPage() {
               className="w-full"
             />
             <p className="text-xs text-gray-500">Link to a cooking tutorial video</p>
+          </div>
+
+          {/* Privacy Setting */}
+          <div className="flex items-center space-x-3 p-4 bg-gray-50 rounded-lg border">
+            <Checkbox
+              id="isPrivate"
+              checked={isPrivate}
+              onCheckedChange={(checked) => setIsPrivate(checked as boolean)}
+            />
+            <div className="flex-1">
+              <Label htmlFor="isPrivate" className="text-sm font-medium flex items-center gap-2 cursor-pointer">
+                {isPrivate ? <Lock className="h-4 w-4 text-gray-600" /> : <Globe className="h-4 w-4 text-green-600" />}
+                {isPrivate ? 'Private' : 'Public'} Meal
+              </Label>
+              <p className="text-xs text-gray-500 mt-1">
+                {isPrivate
+                  ? 'Only you can see this meal'
+                  : 'Other users can see and use this meal in their plans'}
+              </p>
+            </div>
           </div>
 
           {/* Submit Button */}

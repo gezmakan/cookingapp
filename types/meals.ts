@@ -8,6 +8,7 @@ export type Meal = {
   instructions: string | null    // Optional
   video_url: string | null       // YouTube link, optional
   cuisine_type: string | null    // Italian, Mexican, Thai, etc.
+  is_private: boolean            // Private (only you) or Public (everyone)
   created_at: string
 }
 

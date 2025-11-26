@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit, Video, Search, ArrowUpDown } from 'lucide-react'
+import { Plus, Edit, Video, Search, ArrowUpDown, Lock, Globe } from 'lucide-react'
 import VideoModal from '@/components/VideoModal'
 import Footer from '@/components/Footer'
 import Navbar from '@/components/Navbar'
@@ -244,11 +244,22 @@ export default function MealsPage() {
                         )}
                       </div>
 
-                      {meal.cuisine_type && (
-                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                          {meal.cuisine_type}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {meal.cuisine_type && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                            {meal.cuisine_type}
+                          </span>
+                        )}
+
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
+                          meal.is_private
+                            ? 'bg-gray-100 text-gray-700'
+                            : 'bg-green-100 text-green-700'
+                        }`}>
+                          {meal.is_private ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
+                          {meal.is_private ? 'Private' : 'Public'}
                         </span>
-                      )}
+                      </div>
 
                       {meal.ingredients && (
                         <p className="text-sm text-gray-500 mt-2 line-clamp-2">
