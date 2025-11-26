@@ -105,7 +105,7 @@ export default function AddMealPage() {
           {/* Cuisine Type */}
           <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
             <Label htmlFor="cuisineType" className="text-sm font-medium md:w-32 md:flex-shrink-0">
-              Cuisine Type <span className="text-gray-400 text-xs">(optional)</span>
+              Cuisine Type
             </Label>
             <Input
               id="cuisineType"
@@ -120,7 +120,7 @@ export default function AddMealPage() {
           {/* Ingredients */}
           <div className="space-y-2">
             <Label htmlFor="ingredients" className="text-sm font-medium">
-              Ingredients <span className="text-gray-400 text-xs">(optional)</span>
+              Ingredients
             </Label>
             <Textarea
               id="ingredients"
@@ -136,7 +136,7 @@ export default function AddMealPage() {
           {/* Instructions */}
           <div className="space-y-2">
             <Label htmlFor="instructions" className="text-sm font-medium">
-              Instructions <span className="text-gray-400 text-xs">(optional)</span>
+              Instructions
             </Label>
             <Textarea
               id="instructions"
@@ -152,7 +152,7 @@ export default function AddMealPage() {
           {/* YouTube Link */}
           <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
             <Label htmlFor="videoUrl" className="text-sm font-medium md:w-32 md:flex-shrink-0">
-              YouTube Link <span className="text-gray-400 text-xs">(optional)</span>
+              YouTube Link
             </Label>
             <Input
               id="videoUrl"
