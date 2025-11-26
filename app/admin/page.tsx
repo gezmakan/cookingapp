@@ -278,7 +278,8 @@ export default function AdminPage() {
 
       {selectedVideo && (
         <VideoModal
-          url={selectedVideo.url}
+          isOpen={true}
+          videoUrl={selectedVideo.url}
           title={selectedVideo.title}
           onClose={() => setSelectedVideo(null)}
         />
