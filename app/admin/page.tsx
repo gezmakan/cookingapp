@@ -117,7 +117,7 @@ export default function AdminPage() {
       // Add user email info
       const mealsWithUsers = data?.map(meal => ({
         ...meal,
-        user_email: meal.user_id === currentUser?.id ? currentUser.email : 'Unknown'
+        user_email: meal.user_id === currentUser?.id ? (currentUser?.email || 'Unknown') : 'Unknown'
       })) || []
 
       setMeals(mealsWithUsers)
