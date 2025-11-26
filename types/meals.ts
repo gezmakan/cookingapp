@@ -1,0 +1,26 @@
+// Cooking App Types
+
+export type Meal = {
+  id: string
+  user_id: string
+  name: string
+  ingredients: string | null     // Optional
+  instructions: string | null    // Optional
+  video_url: string | null       // YouTube link, optional
+  cuisine_type: string | null    // Italian, Mexican, Thai, etc.
+  created_at: string
+}
+
+export type DayMeal = Meal & {
+  day_meal_id: string           // ID from meal_plan_day_meals junction table
+  order_index: number           // Order within the day
+}
+
+export type MealPlanDay = {
+  id: string
+  user_id: string
+  day_name: string              // "Monday", "Anniversary Dinner", etc.
+  order_index: number           // Order of days in the plan
+  created_at: string
+  meals: DayMeal[]              // Meals assigned to this day
+}
