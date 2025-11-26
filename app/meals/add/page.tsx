@@ -130,7 +130,6 @@ export default function AddMealPage() {
               rows={6}
               className="w-full font-mono text-sm"
             />
-            <p className="text-xs text-gray-500">List ingredients one per line or however you prefer</p>
           </div>
 
           {/* Instructions */}
@@ -146,7 +145,6 @@ export default function AddMealPage() {
               rows={6}
               className="w-full"
             />
-            <p className="text-xs text-gray-500">Step-by-step cooking instructions</p>
           </div>
 
           {/* YouTube Link */}
