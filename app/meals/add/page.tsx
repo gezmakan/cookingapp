@@ -96,7 +96,6 @@ export default function AddMealPage() {
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g., Chicken Tikka Masala"
               required
               className="flex-1"
             />
@@ -112,7 +111,6 @@ export default function AddMealPage() {
               type="text"
               value={cuisineType}
               onChange={(e) => setCuisineType(e.target.value)}
-              placeholder="e.g., Indian, Italian, Mexican"
               className="flex-1"
             />
           </div>
@@ -126,7 +124,6 @@ export default function AddMealPage() {
               id="ingredients"
               value={ingredients}
               onChange={(e) => setIngredients(e.target.value)}
-              placeholder="e.g.,&#10;- 2 lbs chicken breast&#10;- 1 cup yogurt&#10;- 2 tbsp garam masala&#10;- 1 onion, diced"
               rows={6}
               className="w-full font-mono text-sm"
             />
@@ -141,7 +138,6 @@ export default function AddMealPage() {
               id="instructions"
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              placeholder="e.g.,&#10;1. Marinate chicken in yogurt and spices for 2 hours&#10;2. Grill on high heat for 6-7 minutes per side&#10;3. Serve with naan and rice"
               rows={6}
               className="w-full"
             />
@@ -157,7 +153,6 @@ export default function AddMealPage() {
               type="url"
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
-              placeholder="https://youtube.com/watch?v=..."
               className="flex-1"
             />
           </div>

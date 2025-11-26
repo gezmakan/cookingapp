@@ -145,7 +145,6 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="e.g., Chicken Tikka Masala"
                 className="flex-1"
               />
             </div>
@@ -157,7 +156,6 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
                 id="edit-cuisine"
                 value={formData.cuisine_type}
                 onChange={(e) => setFormData({ ...formData, cuisine_type: e.target.value })}
-                placeholder="e.g., Indian, Italian, Mexican"
                 className="flex-1"
               />
             </div>
@@ -169,7 +167,6 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
                 id="edit-ingredients"
                 value={formData.ingredients}
                 onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                placeholder="List ingredients..."
                 rows={4}
                 className="font-mono text-sm"
               />
@@ -182,7 +179,6 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
                 id="edit-instructions"
                 value={formData.instructions}
                 onChange={(e) => setFormData({ ...formData, instructions: e.target.value })}
-                placeholder="Step-by-step cooking instructions..."
                 rows={4}
               />
             </div>
@@ -195,7 +191,6 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
                 type="url"
                 value={formData.video_url}
                 onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
-                placeholder="https://youtube.com/watch?v=..."
                 className="flex-1"
               />
             </div>
