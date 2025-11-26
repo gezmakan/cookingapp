@@ -87,8 +87,8 @@ export default function AddMealPage() {
 
         <form onSubmit={handleSubmit} className="bg-white rounded-lg border p-6 space-y-6">
           {/* Meal Name */}
-          <div className="space-y-2">
-            <Label htmlFor="name" className="text-sm font-medium">
+          <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
+            <Label htmlFor="name" className="text-sm font-medium md:w-32 md:flex-shrink-0">
               Meal Name <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -98,13 +98,13 @@ export default function AddMealPage() {
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g., Chicken Tikka Masala"
               required
-              className="w-full"
+              className="flex-1"
             />
           </div>
 
           {/* Cuisine Type */}
-          <div className="space-y-2">
-            <Label htmlFor="cuisineType" className="text-sm font-medium">
+          <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
+            <Label htmlFor="cuisineType" className="text-sm font-medium md:w-32 md:flex-shrink-0">
               Cuisine Type <span className="text-gray-400 text-xs">(optional)</span>
             </Label>
             <Input
@@ -113,7 +113,7 @@ export default function AddMealPage() {
               value={cuisineType}
               onChange={(e) => setCuisineType(e.target.value)}
               placeholder="e.g., Indian, Italian, Mexican"
-              className="w-full"
+              className="flex-1"
             />
           </div>
 
@@ -150,9 +150,9 @@ export default function AddMealPage() {
           </div>
 
           {/* YouTube Link */}
-          <div className="space-y-2">
-            <Label htmlFor="videoUrl" className="text-sm font-medium">
-              YouTube Video Link <span className="text-gray-400 text-xs">(optional)</span>
+          <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
+            <Label htmlFor="videoUrl" className="text-sm font-medium md:w-32 md:flex-shrink-0">
+              YouTube Link <span className="text-gray-400 text-xs">(optional)</span>
             </Label>
             <Input
               id="videoUrl"
@@ -160,9 +160,8 @@ export default function AddMealPage() {
               value={videoUrl}
               onChange={(e) => setVideoUrl(e.target.value)}
               placeholder="https://youtube.com/watch?v=..."
-              className="w-full"
+              className="flex-1"
             />
-            <p className="text-xs text-gray-500">Link to a cooking tutorial video</p>
           </div>
 
           {/* Privacy Setting */}

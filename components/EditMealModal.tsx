@@ -139,24 +139,26 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
         ) : (
           <div className="space-y-4 py-4">
             {/* Name */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-name">Meal Name *</Label>
+            <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
+              <Label htmlFor="edit-name" className="md:w-32 md:flex-shrink-0">Meal Name *</Label>
               <Input
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., Chicken Tikka Masala"
+                className="flex-1"
               />
             </div>
 
             {/* Cuisine Type */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-cuisine">Cuisine Type</Label>
+            <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
+              <Label htmlFor="edit-cuisine" className="md:w-32 md:flex-shrink-0">Cuisine Type</Label>
               <Input
                 id="edit-cuisine"
                 value={formData.cuisine_type}
                 onChange={(e) => setFormData({ ...formData, cuisine_type: e.target.value })}
                 placeholder="e.g., Indian, Italian, Mexican"
+                className="flex-1"
               />
             </div>
 
@@ -186,14 +188,15 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
             </div>
 
             {/* Video URL */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-video">YouTube Video Link</Label>
+            <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
+              <Label htmlFor="edit-video" className="md:w-32 md:flex-shrink-0">YouTube Link</Label>
               <Input
                 id="edit-video"
                 type="url"
                 value={formData.video_url}
                 onChange={(e) => setFormData({ ...formData, video_url: e.target.value })}
                 placeholder="https://youtube.com/watch?v=..."
+                className="flex-1"
               />
             </div>
 
