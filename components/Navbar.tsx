@@ -36,10 +36,10 @@ export default function Navbar({ searchQuery, onSearchChange }: NavbarProps) {
         <div className="flex items-center justify-between gap-4 h-14">
           <Link
             href="/plan"
-            className="flex items-center gap-1 md:gap-2 font-semibold text-gray-800 text-sm md:text-lg flex-shrink-0"
+            className="flex items-center gap-1 md:gap-2 font-semibold text-gray-800 text-sm md:text-lg shrink-0"
           >
             <span role="img" aria-label="cooking" className="text-base md:text-xl">👨‍🍳</span>
-            <span>CookMe</span>
+            <span>Yummii</span>
           </Link>
 
           <div className="flex items-center gap-3">

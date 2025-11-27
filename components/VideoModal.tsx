@@ -22,6 +22,14 @@ type VideoModalProps = {
   meal?: Meal
 }
 
+// Detect video platform
+function getVideoPlatform(url: string): 'youtube' | 'tiktok' | 'unknown' {
+  if (!url) return 'unknown'
+  if (url.includes('youtube.com') || url.includes('youtu.be')) return 'youtube'
+  if (url.includes('tiktok.com')) return 'tiktok'
+  return 'unknown'
+}
+
 // Convert YouTube URL to embed URL
 function getYouTubeEmbedUrl(url: string): string {
   if (!url) return ''
@@ -34,8 +42,28 @@ function getYouTubeEmbedUrl(url: string): string {
   return videoId ? `https://www.youtube.com/embed/${videoId}` : url
 }
 
+// Extract TikTok video ID and create embed URL
+function getTikTokEmbedUrl(url: string): string {
+  if (!url) return ''
+
+  // Handle different TikTok URL formats
+  // https://www.tiktok.com/@username/video/1234567890
+  // https://vm.tiktok.com/shortcode
+  const videoIdMatch = url.match(/\/video\/(\d+)/)
+  if (videoIdMatch && videoIdMatch[1]) {
+    return `https://www.tiktok.com/embed/v2/${videoIdMatch[1]}`
+  }
+
+  return url
+}
+
 export default function VideoModal({ isOpen, onClose, videoUrl, title, meal }: VideoModalProps) {
-  const embedUrl = getYouTubeEmbedUrl(videoUrl)
+  const platform = getVideoPlatform(videoUrl)
+  const embedUrl = platform === 'youtube'
+    ? getYouTubeEmbedUrl(videoUrl)
+    : platform === 'tiktok'
+    ? getTikTokEmbedUrl(videoUrl)
+    : videoUrl
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
@@ -43,7 +71,10 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title, meal }: V
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="w-full flex-shrink-0" style={{ aspectRatio: '16/9' }}>
+        <div
+          className={`flex-shrink-0 ${platform === 'tiktok' ? 'w-full max-w-sm mx-auto' : 'w-full'}`}
+          style={{ aspectRatio: platform === 'tiktok' ? '9/16' : '16/9' }}
+        >
           <iframe
             src={embedUrl}
             title={title}

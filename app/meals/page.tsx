@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit, Video, Search, ArrowUpDown, Lock, Globe } from 'lucide-react'
+import { Plus, Edit, Video, Search, Lock, Globe } from 'lucide-react'
 import VideoModal from '@/components/VideoModal'
 import EditMealModal from '@/components/EditMealModal'
 import Footer from '@/components/Footer'
@@ -32,7 +32,6 @@ export default function MealsPage() {
   const [editingMealId, setEditingMealId] = useState<string | null>(null)
   const [showAll, setShowAll] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
@@ -76,7 +75,7 @@ export default function MealsPage() {
     return 0
   }
 
-  // Filter and sort meals
+  // Filter meals
   const filteredMeals = meals
     .filter(meal => {
       // Filter by cuisine type if selected
@@ -95,16 +94,12 @@ export default function MealsPage() {
     }))
     .filter(({ score }) => score > 0 || searchQuery === '')
     .sort((a, b) => {
-      if (searchQuery) {
-        if (b.score !== a.score) {
-          return b.score - a.score
-        }
+      // Only sort by search score when searching
+      if (searchQuery && b.score !== a.score) {
+        return b.score - a.score
       }
-      if (sortOrder === 'asc') {
-        return a.meal.name.localeCompare(b.meal.name)
-      } else {
-        return b.meal.name.localeCompare(a.meal.name)
-      }
+      // Otherwise keep original order (most recent first from DB)
+      return 0
     })
     .map(({ meal }) => meal)
 
@@ -151,7 +146,7 @@ export default function MealsPage() {
       <div className="max-w-5xl xl:max-w-6xl mx-auto px-4 flex-1 w-full md:p-8 pt-4">
         <div className="mb-4 md:mb-8">
           <div className="flex items-center justify-between gap-3 mt-2 md:mt-4">
-            <h1 className="text-2xl md:text-3xl font-bold">Meal Library</h1>
+            <h1 className="text-2xl md:text-3xl font-bold">Recipes</h1>
           </div>
         </div>
 
@@ -188,42 +183,31 @@ export default function MealsPage() {
           </div>
         ) : (
           <>
-            <div className="bg-white md:rounded-lg border-y md:border -mx-4 md:mx-0 px-4 py-3 mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2 flex-wrap">
+            <div className="bg-white md:rounded-lg border-y md:border -mx-4 md:mx-0 px-4 py-3 mb-4 flex items-center justify-between gap-3 overflow-x-auto">
+              <div className="flex items-center gap-2 min-w-0">
                 <button
-                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                  className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900 flex-shrink-0"
-                  title={`Sort ${sortOrder === 'asc' ? 'A-Z' : 'Z-A'}`}
+                  onClick={() => setSelectedCuisine(null)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                    selectedCuisine === null
+                      ? 'bg-orange-500 text-white'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
                 >
-                  <ArrowUpDown className="h-4 w-4" />
+                  All
                 </button>
-
-                {/* Cuisine filter pills */}
-                <div className="flex items-center gap-2 flex-wrap">
+                {uniqueCuisineTypes.map(cuisine => (
                   <button
-                    onClick={() => setSelectedCuisine(null)}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                      selectedCuisine === null
+                    key={cuisine}
+                    onClick={() => setSelectedCuisine(cuisine)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
+                      selectedCuisine === cuisine
                         ? 'bg-orange-500 text-white'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                     }`}
                   >
-                    All
+                    {cuisine}
                   </button>
-                  {uniqueCuisineTypes.map(cuisine => (
-                    <button
-                      key={cuisine}
-                      onClick={() => setSelectedCuisine(cuisine)}
-                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-                        selectedCuisine === cuisine
-                          ? 'bg-orange-500 text-white'
-                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      }`}
-                    >
-                      {cuisine}
-                    </button>
-                  ))}
-                </div>
+                ))}
               </div>
 
               {user && (
@@ -233,33 +217,48 @@ export default function MealsPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 -mx-4 md:mx-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {displayedMeals.map((meal) => {
+                // Detect platform
+                const isTikTok = meal.video_url?.includes('tiktok.com')
+                const isYouTube = meal.video_url && (meal.video_url.includes('youtube.com') || meal.video_url.includes('youtu.be'))
+
                 // Extract YouTube video ID for thumbnail
                 const getYouTubeThumbnail = (url: string) => {
                   const videoId = url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]
                   return videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null
                 }
 
-                const thumbnail = meal.video_url ? getYouTubeThumbnail(meal.video_url) : null
+                const thumbnail = isYouTube ? getYouTubeThumbnail(meal.video_url!) : null
+                const hasVideo = !!(meal.video_url && (isYouTube || isTikTok))
 
                 return (
                   <div
                     key={meal.id}
-                    className="bg-white border-y md:border md:rounded-lg overflow-hidden hover:shadow-lg transition-shadow group"
+                    className="bg-white border rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-shadow group"
                   >
                     {/* Thumbnail */}
                     <div className="relative aspect-video bg-gradient-to-br from-orange-100 to-orange-200 overflow-hidden">
-                      {thumbnail ? (
+                      {hasVideo ? (
                         <button
                           onClick={() => setSelectedVideo({ url: meal.video_url!, title: meal.name, meal })}
                           className="w-full h-full"
                         >
-                          <img
-                            src={thumbnail}
-                            alt={meal.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          />
+                          {thumbnail ? (
+                            <img
+                              src={thumbnail}
+                              alt={meal.name}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                            />
+                          ) : isTikTok ? (
+                            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-pink-100 to-blue-100">
+                              <span className="text-6xl">🎵</span>
+                            </div>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <span className="text-6xl opacity-50">🍽️</span>
+                            </div>
+                          )}
                           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors flex items-center justify-center">
                             <div className="px-6 py-4 rounded-lg bg-red-600/50 flex items-center justify-center shadow-lg group-hover:bg-red-600/70 transition-colors">
                               <div className="w-0 h-0 border-l-[14px] border-l-white border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent ml-1"></div>
@@ -275,20 +274,34 @@ export default function MealsPage() {
 
                     {/* Content */}
                     <div className="p-4">
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3
-                          className={`font-semibold text-lg text-gray-900 line-clamp-2 flex-1 ${
-                            meal.video_url ? 'cursor-pointer hover:text-orange-600 transition-colors' : ''
-                          }`}
-                          onClick={() => {
-                            if (meal.video_url) {
-                              setSelectedVideo({ url: meal.video_url, title: meal.name, meal })
-                            }
-                          }}
-                        >
-                          {meal.name}
-                        </h3>
-                        {user && (
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2 flex-wrap flex-1">
+                          <h3
+                            className={`font-semibold text-lg text-gray-900 ${
+                              hasVideo ? 'cursor-pointer hover:text-orange-600 transition-colors' : ''
+                            }`}
+                            onClick={() => {
+                              if (hasVideo) {
+                                setSelectedVideo({ url: meal.video_url!, title: meal.name, meal })
+                              }
+                            }}
+                          >
+                            {meal.name}
+                          </h3>
+                          {meal.cuisine_type && (
+                            <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
+                              {meal.cuisine_type}
+                            </span>
+                          )}
+                          <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                            meal.is_private
+                              ? 'bg-gray-100 text-gray-700'
+                              : 'bg-green-100 text-green-700'
+                          }`} title={meal.is_private ? 'Private' : 'Public'}>
+                            {meal.is_private ? <Lock className="h-3.5 w-3.5" /> : <Globe className="h-3.5 w-3.5" />}
+                          </span>
+                        </div>
+                        {user && user.id === meal.user_id && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -298,23 +311,6 @@ export default function MealsPage() {
                             <Edit className="h-4 w-4" />
                           </Button>
                         )}
-                      </div>
-
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {meal.cuisine_type && (
-                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-700">
-                            {meal.cuisine_type}
-                          </span>
-                        )}
-
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${
-                          meal.is_private
-                            ? 'bg-gray-100 text-gray-700'
-                            : 'bg-green-100 text-green-700'
-                        }`}>
-                          {meal.is_private ? <Lock className="h-3 w-3" /> : <Globe className="h-3 w-3" />}
-                          {meal.is_private ? 'Private' : 'Public'}
-                        </span>
                       </div>
                     </div>
                   </div>

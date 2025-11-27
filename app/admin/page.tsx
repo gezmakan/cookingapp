@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ArrowLeft, Trash2, Video } from 'lucide-react'
+import { ArrowLeft, Trash2, Video, Lock } from 'lucide-react'
 import VideoModal from '@/components/VideoModal'
 
 type User = {
@@ -34,6 +34,7 @@ type Meal = {
   user_id: string
   created_at: string
   user_email: string | null
+  is_private: boolean
 }
 
 export default function AdminPage() {
@@ -81,20 +82,27 @@ export default function AdminPage() {
         }
       })
 
-      // Get current user info
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      // Get all user emails using the admin function
+      const { data: userEmails, error: emailError } = await supabase
+        .rpc('get_all_user_emails')
 
-      // For now, we'll show the current user if they have meals
-      const usersList: User[] = []
-
-      if (currentUser && userMealCounts[currentUser.id]) {
-        usersList.push({
-          id: currentUser.id,
-          email: currentUser.email || 'Unknown',
-          created_at: currentUser.created_at || new Date().toISOString(),
-          meal_count: userMealCounts[currentUser.id]
-        })
+      if (emailError) {
+        console.error('Error fetching user emails:', emailError)
+        return
       }
+
+      // Create users list with all users who have meals
+      const usersList: User[] = []
+      userEmails?.forEach((u: any) => {
+        if (userMealCounts[u.user_id]) {
+          usersList.push({
+            id: u.user_id,
+            email: u.email || 'Unknown',
+            created_at: new Date().toISOString(), // We don't have created_at from this query
+            meal_count: userMealCounts[u.user_id]
+          })
+        }
+      })
 
       setUsers(usersList)
     } catch (error) {
@@ -111,18 +119,53 @@ export default function AdminPage() {
 
       if (error) throw error
 
-      // Get current user info
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
+      // Get all user emails using the admin function
+      const { data: userEmails, error: emailError } = await supabase
+        .rpc('get_all_user_emails')
+
+      if (emailError) {
+        console.error('Error fetching user emails:', emailError)
+      }
+
+      // Create a map of user_id to email
+      const emailMap: { [key: string]: string } = {}
+      userEmails?.forEach((u: any) => {
+        emailMap[u.user_id] = u.email
+      })
 
       // Add user email info
       const mealsWithUsers = data?.map(meal => ({
         ...meal,
-        user_email: meal.user_id === currentUser?.id ? (currentUser?.email || 'Unknown') : 'Unknown'
+        user_email: emailMap[meal.user_id] || 'Unknown'
       })) || []
 
       setMeals(mealsWithUsers)
     } catch (error) {
       console.error('Error fetching meals:', error)
+    }
+  }
+
+  const forcePrivate = async (mealId: string, currentPrivate: boolean) => {
+    if (currentPrivate) {
+      alert('This meal is already private')
+      return
+    }
+
+    if (!confirm('Force this meal to be private? The user will not be able to make it public again unless you change it.')) return
+
+    try {
+      const { error } = await supabase
+        .from('meals')
+        .update({ is_private: true })
+        .eq('id', mealId)
+
+      if (error) throw error
+
+      await fetchAllMeals()
+      alert('Meal is now private')
+    } catch (error) {
+      console.error('Error forcing meal private:', error)
+      alert('Failed to update meal')
     }
   }
 
@@ -185,13 +228,14 @@ export default function AdminPage() {
                     <TableHead>User</TableHead>
                     <TableHead>Video</TableHead>
                     <TableHead>Created</TableHead>
+                    <TableHead>Privacy</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {meals.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                      <TableCell colSpan={7} className="text-center text-gray-500 py-8">
                         No meals found
                       </TableCell>
                     </TableRow>
@@ -223,15 +267,38 @@ export default function AdminPage() {
                         <TableCell className="text-sm text-gray-600">
                           {new Date(meal.created_at).toLocaleDateString()}
                         </TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            meal.is_private
+                              ? 'bg-gray-100 text-gray-700'
+                              : 'bg-green-100 text-green-700'
+                          }`}>
+                            {meal.is_private ? 'Private' : 'Public'}
+                          </span>
+                        </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteMeal(meal.id)}
-                            className="text-red-600 hover:text-red-700"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          <div className="flex gap-2 justify-end">
+                            {!meal.is_private && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => forcePrivate(meal.id, meal.is_private)}
+                                className="text-orange-600 hover:text-orange-700 border-orange-300"
+                              >
+                                <Lock className="h-4 w-4 mr-1" />
+                                Force Private
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteMeal(meal.id)}
+                              className="text-red-600 hover:text-red-700"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
