@@ -88,16 +88,13 @@ function SortableMealRow({
         }}
       >
         <div className="flex items-center gap-2">
-          <h4 className={`font-medium text-gray-900 ${meal.video_url ? 'hover:text-orange-600 transition-colors' : ''}`}>
+          <h4 className={`font-medium text-gray-900 ${meal.video_url && !isEditMode ? 'hover:text-orange-600 transition-colors' : ''}`}>
             {meal.name}
           </h4>
-          {meal.video_url && (
+          {!isEditMode && meal.video_url && (
             <Video className="h-3.5 w-3.5 text-orange-600" />
           )}
         </div>
-        {meal.cuisine_type && (
-          <span className="text-xs text-gray-500">{meal.cuisine_type}</span>
-        )}
       </div>
       {isEditMode && (
         <Button
@@ -252,6 +249,36 @@ export default function MealPlanPage() {
 
     loadPreferences()
   }, [])
+
+  // Load meals for sidebar when in edit mode
+  useEffect(() => {
+    const loadMealsForSidebar = async () => {
+      if (!isEditMode) {
+        setAvailableMeals([])
+        return
+      }
+
+      setIsLoadingMeals(true)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) throw new Error('Not authenticated')
+
+        const { data, error } = await supabase
+          .from('meals')
+          .select('*')
+          .order('name', { ascending: true })
+
+        if (error) throw error
+        setAvailableMeals(data || [])
+      } catch (error) {
+        console.error('Error loading meals for sidebar:', error)
+      } finally {
+        setIsLoadingMeals(false)
+      }
+    }
+
+    loadMealsForSidebar()
+  }, [isEditMode, supabase])
 
   const handleStartEditingTitle = () => {
     setEditTitleValue(menuTitle)
@@ -457,6 +484,29 @@ export default function MealPlanPage() {
     }
   }
 
+  const handleDropMealOnDay = async (dayId: string, mealId: string) => {
+    try {
+      const day = days?.find(d => d.id === dayId)
+      if (!day) throw new Error('Day not found')
+
+      const maxOrder = day.meals.length ? Math.max(...day.meals.map(m => m.order_index)) : -1
+
+      const { error } = await supabase
+        .from('meal_plan_day_meals')
+        .insert({
+          meal_plan_day_id: dayId,
+          meal_id: mealId,
+          order_index: maxOrder + 1,
+        })
+
+      if (error) throw error
+      await refetch()
+    } catch (error) {
+      console.error('Error adding meal to day:', error)
+      alert('Failed to add meal')
+    }
+  }
+
   const handleRemoveMealFromDay = async (dayMealId: string) => {
     try {
       const { error } = await supabase
@@ -546,9 +596,30 @@ export default function MealPlanPage() {
               </Card>
             ) : (
               <>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {days.filter(day => day.is_active).map((day) => (
-                  <Card key={day.id} className="border-orange-100">
+                <div className="flex flex-col lg:flex-row gap-6">
+                  {/* Days Grid */}
+                  <div className="flex-1">
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {days.filter(day => day.is_active).map((day) => (
+                  <Card
+                    key={day.id}
+                    className="border-orange-100 transition-all"
+                    onDragOver={(e) => {
+                      e.preventDefault()
+                      e.currentTarget.classList.add('ring-2', 'ring-orange-300', 'bg-orange-50/50')
+                    }}
+                    onDragLeave={(e) => {
+                      e.currentTarget.classList.remove('ring-2', 'ring-orange-300', 'bg-orange-50/50')
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault()
+                      e.currentTarget.classList.remove('ring-2', 'ring-orange-300', 'bg-orange-50/50')
+                      const mealId = e.dataTransfer.getData('mealId')
+                      if (mealId) {
+                        handleDropMealOnDay(day.id, mealId)
+                      }
+                    }}
+                  >
                     <CardHeader className="!px-4 !pt-3.5 !pb-3 border-b border-orange-50">
                       <div className="flex items-center justify-between">
                         {editingDayId === day.id ? (
@@ -569,7 +640,7 @@ export default function MealPlanPage() {
                           />
                         ) : (
                           <CardTitle
-                            className={`text-xl ${isEditMode ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}
+                            className={`text-xl font-quicksand ${isEditMode ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}
                             onClick={() => isEditMode && handleStartEditingDayName(day.id, day.day_name)}
                             title={isEditMode ? 'Click to edit' : ''}
                           >
@@ -579,7 +650,6 @@ export default function MealPlanPage() {
                         {isEditMode && (
                           <div className="flex items-center gap-3">
                             <div className="flex items-center gap-2">
-                              <span className="text-sm text-gray-600">Active</span>
                               <button
                                 type="button"
                                 onClick={() => handleToggleActive(day.id, day.is_active)}
@@ -648,25 +718,79 @@ export default function MealPlanPage() {
                               onClick={() => openMealSelector(day.id)}
                             >
                               <Plus className="h-3 w-3 mr-1" />
-                              Add Another Meal
+                              Add More
                             </Button>
                           )}
                         </div>
                       )}
                     </CardContent>
-                  </Card>
-                ))}
+                      </Card>
+                      ))}
 
-                {isEditMode && (
-                  <Card className="border-2 border-dashed border-gray-300 hover:border-orange-400 transition-colors cursor-pointer" onClick={() => setIsAddDayOpen(true)}>
-                    <CardContent className="flex items-center justify-center py-20">
-                      <div className="text-center">
-                        <Plus className="h-12 w-12 mx-auto mb-3 text-gray-400" />
-                        <p className="text-gray-600 font-medium">Add Day</p>
+                      {isEditMode && (
+                        <Card className="border-2 border-dashed border-gray-300 hover:border-orange-400 transition-colors cursor-pointer" onClick={() => setIsAddDayOpen(true)}>
+                          <CardContent className="flex items-center justify-center py-20">
+                            <div className="text-center">
+                              <Plus className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                              <p className="text-gray-600 font-medium">Add Day</p>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Meal Library Sidebar - Desktop Only */}
+                  <div className="hidden lg:block lg:w-80 xl:w-96">
+                    <div className="sticky top-4 bg-white border border-orange-100 rounded-3xl shadow-lg p-6 max-h-[calc(100vh-6rem)] flex flex-col">
+                      <h3 className="text-xl font-semibold text-gray-900 font-quicksand mb-4">Meal Library</h3>
+
+                      {/* Search */}
+                      <div className="relative mb-4">
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          placeholder="Search meals..."
+                          value={mealSearch}
+                          onChange={(e) => setMealSearch(e.target.value)}
+                          className="pl-9"
+                        />
                       </div>
-                    </CardContent>
-                  </Card>
-                )}
+
+                      {/* Meals List */}
+                      <div className="flex-1 overflow-y-auto -mx-2 px-2">
+                        {isLoadingMeals ? (
+                          <div className="py-12 text-center">
+                            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-orange-600" />
+                            <p className="text-gray-500 text-sm">Loading meals...</p>
+                          </div>
+                        ) : filteredMeals.length === 0 ? (
+                          <div className="py-12 text-center text-gray-500 text-sm">
+                            {mealSearch ? 'No meals found' : 'No meals yet'}
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {filteredMeals.map((meal) => (
+                              <div
+                                key={meal.id}
+                                className="p-3 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-colors cursor-grab active:cursor-grabbing"
+                                draggable
+                                onDragStart={(e) => {
+                                  e.dataTransfer.effectAllowed = 'copy'
+                                  e.dataTransfer.setData('mealId', meal.id)
+                                  e.dataTransfer.setData('mealName', meal.name)
+                                }}
+                              >
+                                <p className="font-medium text-gray-900 text-sm">{meal.name}</p>
+                                {meal.cuisine_type && (
+                                  <p className="text-xs text-gray-500 mt-1">{meal.cuisine_type}</p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {isEditMode && days.filter(day => !day.is_active).length > 0 && (
@@ -695,7 +819,7 @@ export default function MealPlanPage() {
                                 />
                               ) : (
                                 <CardTitle
-                                  className="text-xl text-gray-600 cursor-pointer hover:opacity-70 transition-opacity"
+                                  className="text-xl text-gray-600 font-quicksand cursor-pointer hover:opacity-70 transition-opacity"
                                   onClick={() => handleStartEditingDayName(day.id, day.day_name)}
                                   title="Click to edit"
                                 >
@@ -769,7 +893,7 @@ export default function MealPlanPage() {
                                   onClick={() => openMealSelector(day.id)}
                                 >
                                   <Plus className="h-3 w-3 mr-1" />
-                                  Add Another Meal
+                                  Add More
                                 </Button>
                               </div>
                             )}
@@ -842,7 +966,7 @@ export default function MealPlanPage() {
                         <div className="relative p-6 space-y-5">
                           <div className="flex items-start justify-between">
                             <div>
-                              <h3 className="text-2xl font-semibold text-gray-900">{day.day_name}</h3>
+                              <h3 className="text-2xl font-semibold text-gray-900 font-quicksand">{day.day_name}</h3>
                             </div>
                             {isToday && (
                               <span className="rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-semibold">
@@ -880,11 +1004,6 @@ export default function MealPlanPage() {
                                   <div className="flex items-center justify-between gap-4">
                                     <div className="min-w-0">
                                       <p className="font-medium text-gray-900 truncate">{meal.name}</p>
-                                      {meal.cuisine_type && (
-                                        <p className="text-xs uppercase tracking-[0.2em] text-gray-400 mt-1">
-                                          {meal.cuisine_type}
-                                        </p>
-                                      )}
                                     </div>
                                     {!meal.video_url && (
                                       <span className="text-xs text-gray-400">No video</span>
@@ -1046,11 +1165,6 @@ export default function MealPlanPage() {
                             <Video className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" />
                           )}
                         </div>
-                        {meal.cuisine_type && (
-                          <span className="inline-block mt-1 bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-xs">
-                            {meal.cuisine_type}
-                          </span>
-                        )}
                       </div>
                     </button>
                   )
