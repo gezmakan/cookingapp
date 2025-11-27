@@ -39,11 +39,11 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title, meal }: V
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:!max-w-[960px] w-[90vw] max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="sm:!max-w-[960px] w-[90vw] h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] md:h-auto md:max-h-[90vh] overflow-y-auto overflow-x-hidden flex flex-col">
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
-        <div className="aspect-video w-full">
+        <div className="w-full flex-shrink-0" style={{ aspectRatio: '16/9' }}>
           <iframe
             src={embedUrl}
             title={title}
@@ -53,7 +53,7 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title, meal }: V
           />
         </div>
         {meal && (meal.ingredients || meal.instructions) && (
-          <div className="mt-4 pt-4 border-t space-y-4">
+          <div className="mt-4 pt-4 border-t space-y-4 flex-1 overflow-y-auto">
             {meal.ingredients && (
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-2">Ingredients</h3>

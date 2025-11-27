@@ -134,6 +134,13 @@ export default function MealPlanPage() {
   const [editingDayId, setEditingDayId] = useState<string | null>(null)
   const [editingDayName, setEditingDayName] = useState('')
 
+  // Menu title/subtitle state
+  const [menuTitle, setMenuTitle] = useState('Menu')
+  const [menuSubtitle, setMenuSubtitle] = useState('Plan your weekly meals')
+  const [isEditingTitle, setIsEditingTitle] = useState(false)
+  const [editTitleValue, setEditTitleValue] = useState('')
+  const [editSubtitleValue, setEditSubtitleValue] = useState('')
+
   // Drag & drop sensors
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -145,6 +152,69 @@ export default function MealPlanPage() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
+
+  // Load user preferences
+  useEffect(() => {
+    const loadPreferences = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) return
+
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .select('menu_title, menu_subtitle')
+          .eq('user_id', user.id)
+          .single()
+
+        if (error && error.code !== 'PGRST116') throw error
+
+        if (data) {
+          setMenuTitle(data.menu_title || 'Menu')
+          setMenuSubtitle(data.menu_subtitle || 'Plan your weekly meals')
+        }
+      } catch (error) {
+        console.error('Error loading preferences:', error)
+      }
+    }
+
+    loadPreferences()
+  }, [])
+
+  const handleSaveTitleSubtitle = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert({
+          user_id: user.id,
+          menu_title: editTitleValue.trim() || 'Menu',
+          menu_subtitle: editSubtitleValue.trim(),
+          updated_at: new Date().toISOString(),
+        }, {
+          onConflict: 'user_id'
+        })
+
+      if (error) {
+        console.error('Upsert error:', error)
+        throw error
+      }
+
+      setMenuTitle(editTitleValue.trim() || 'Menu')
+      setMenuSubtitle(editSubtitleValue.trim())
+      setIsEditingTitle(false)
+    } catch (error) {
+      console.error('Error saving preferences:', error)
+      alert('Failed to save')
+    }
+  }
+
+  const handleStartEditingTitle = () => {
+    setEditTitleValue(menuTitle)
+    setEditSubtitleValue(menuSubtitle)
+    setIsEditingTitle(true)
+  }
 
   const handleAddDay = async () => {
     if (!dayName.trim()) return
@@ -391,10 +461,35 @@ export default function MealPlanPage() {
       <div className="container mx-auto px-4 py-8 max-w-7xl flex-1">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Meal Plan</h1>
-            <p className="text-gray-600 mt-1">Plan your weekly meals</p>
-          </div>
+          {isEditingTitle ? (
+            <div className="flex-1 max-w-md space-y-2">
+              <Input
+                value={editTitleValue}
+                onChange={(e) => setEditTitleValue(e.target.value)}
+                placeholder="Menu title"
+                className="text-2xl font-bold h-12"
+                maxLength={50}
+              />
+              <Input
+                value={editSubtitleValue}
+                onChange={(e) => setEditSubtitleValue(e.target.value)}
+                placeholder="Subtitle (optional)"
+                maxLength={100}
+              />
+              <div className="flex gap-2">
+                <Button size="sm" onClick={handleSaveTitleSubtitle}>Save</Button>
+                <Button size="sm" variant="outline" onClick={() => setIsEditingTitle(false)}>Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="group cursor-pointer" onClick={handleStartEditingTitle}>
+              <div className="flex items-center gap-2">
+                <h1 className="text-3xl font-bold text-gray-900">{menuTitle}</h1>
+                <Edit2 className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+              </div>
+              {menuSubtitle && <p className="text-gray-600 mt-1">{menuSubtitle}</p>}
+            </div>
+          )}
           <div className="flex items-center gap-3">
             <Button
               variant={isEditMode ? "default" : "outline"}
