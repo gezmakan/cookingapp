@@ -34,8 +34,9 @@ export default function MealsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null)
   const [showMineOnly, setShowMineOnly] = useState(false)
-  const [filtersLoaded, setFiltersLoaded] = useState(false)
-  const manualFilterChangeRef = useRef(false)
+  const [filtersInitialized, setFiltersInitialized] = useState(false)
+  const [shouldPersistFilters, setShouldPersistFilters] = useState(false)
+  const userInteractedRef = useRef(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -128,10 +129,10 @@ export default function MealsPage() {
   useEffect(() => {
     const loadFilterPreferences = async () => {
       if (!user) {
-        setFiltersLoaded(true)
+        setFiltersInitialized(true)
         return
       }
-      setFiltersLoaded(false)
+      setFiltersInitialized(false)
       try {
         const { data, error } = await supabase
           .from('user_preferences')
@@ -139,7 +140,7 @@ export default function MealsPage() {
           .eq('user_id', user.id)
           .single()
 
-        if (!error && data && !manualFilterChangeRef.current) {
+        if (!error && data && !userInteractedRef.current) {
           setSelectedCuisine(data.meal_filter_cuisine || null)
           setShowMineOnly(!!data.meal_filter_show_mine)
           setSearchQuery(data.meal_filter_search || '')
@@ -147,7 +148,8 @@ export default function MealsPage() {
       } catch (error) {
         console.error('Error loading meal filter preferences:', error)
       } finally {
-        setFiltersLoaded(true)
+        setFiltersInitialized(true)
+        userInteractedRef.current = false
       }
     }
 
@@ -161,8 +163,9 @@ export default function MealsPage() {
   }, [user, showMineOnly])
 
   useEffect(() => {
-    if (!user) return
-    if (!filtersLoaded && !manualFilterChangeRef.current) return
+    if (!user || !filtersInitialized || !shouldPersistFilters) {
+      return
+    }
 
     const persistFilters = async () => {
       try {
@@ -175,27 +178,30 @@ export default function MealsPage() {
             meal_filter_search: searchQuery,
             updated_at: new Date().toISOString(),
           }, { onConflict: 'user_id' })
-        manualFilterChangeRef.current = false
+        setShouldPersistFilters(false)
       } catch (error) {
         console.error('Error saving meal filter preferences:', error)
       }
     }
 
     persistFilters()
-  }, [selectedCuisine, showMineOnly, searchQuery, user, filtersLoaded])
+  }, [selectedCuisine, showMineOnly, searchQuery, user, filtersInitialized, shouldPersistFilters])
 
   const handleSelectCuisine = (cuisine: string | null) => {
-    manualFilterChangeRef.current = true
+    userInteractedRef.current = true
+    setShouldPersistFilters(true)
     setSelectedCuisine(cuisine)
   }
 
   const handleToggleMineOnly = () => {
-    manualFilterChangeRef.current = true
+    userInteractedRef.current = true
+    setShouldPersistFilters(true)
     setShowMineOnly((prev) => !prev)
   }
 
   const handleSearchChange = (value: string) => {
-    manualFilterChangeRef.current = true
+    userInteractedRef.current = true
+    setShouldPersistFilters(true)
     setSearchQuery(value)
   }
 
