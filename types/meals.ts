@@ -22,6 +22,7 @@ export type MealPlanDay = {
   user_id: string
   day_name: string              // "Monday", "Anniversary Dinner", etc.
   order_index: number           // Order of days in the plan
+  is_active: boolean            // Active (shown) or Inactive (hidden)
   created_at: string
   meals: DayMeal[]              // Meals assigned to this day
 }

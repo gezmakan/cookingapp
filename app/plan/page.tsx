@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useMealPlanStore } from '@/hooks/useMealPlanStore'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Loader2, Edit2, Trash2, Video, Search } from 'lucide-react'
+import { Plus, Loader2, Edit2, Trash2, Video, Search, Eye, EyeOff } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -86,6 +86,22 @@ export default function MealPlanPage() {
     } catch (error) {
       console.error('Error deleting day:', error)
       alert('Failed to delete day')
+    }
+  }
+
+  const handleToggleActive = async (dayId: string, currentActive: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('meal_plan_days')
+        .update({ is_active: !currentActive })
+        .eq('id', dayId)
+
+      if (error) throw error
+
+      await refetch()
+    } catch (error) {
+      console.error('Error toggling day active state:', error)
+      alert('Failed to toggle day')
     }
   }
 
@@ -230,14 +246,25 @@ export default function MealPlanPage() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {days.map((day) => (
+          <>
+            {/* Active Days */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {days.filter(day => day.is_active).map((day) => (
               <Card key={day.id} className="border-orange-100">
                 <CardHeader className="!px-4 !pt-3.5 !pb-3 border-b border-orange-50">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">{day.day_name}</CardTitle>
                     {isEditMode && (
                       <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleToggleActive(day.id, day.is_active)}
+                          className="text-gray-600 hover:text-gray-700"
+                          title="Hide day"
+                        >
+                          <EyeOff className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -316,7 +343,103 @@ export default function MealPlanPage() {
                 </CardContent>
               </Card>
             ))}
-          </div>
+            </div>
+
+            {/* Inactive Days - Only show in edit mode */}
+            {isEditMode && days.filter(day => !day.is_active).length > 0 && (
+              <div className="mt-12">
+                <h2 className="text-xl font-semibold text-gray-700 mb-4">Inactive Days</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {days.filter(day => !day.is_active).map((day) => (
+                    <Card key={day.id} className="border-gray-300 bg-gray-50">
+                      <CardHeader className="!px-4 !pt-3.5 !pb-3 border-b border-gray-200">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-xl text-gray-600">{day.day_name}</CardTitle>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleToggleActive(day.id, day.is_active)}
+                              className="text-green-600 hover:text-green-700"
+                              title="Show day"
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteDay(day.id)}
+                              className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-4">
+                        {day.meals.length === 0 ? (
+                          <div className="py-8 text-center">
+                            <p className="text-gray-400 mb-3">No meals yet</p>
+                            <Button variant="outline" size="sm" onClick={() => openMealSelector(day.id)}>
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Meal
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {day.meals.map((meal) => (
+                              <div
+                                key={meal.day_meal_id}
+                                className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 opacity-60"
+                              >
+                                <div
+                                  className={`flex-1 ${meal.video_url ? 'cursor-pointer' : ''}`}
+                                  onClick={() => {
+                                    if (meal.video_url) {
+                                      setSelectedVideo({ url: meal.video_url, title: meal.name, meal })
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <h4 className={`font-medium text-gray-700 ${meal.video_url ? 'hover:text-orange-600 transition-colors' : ''}`}>
+                                      {meal.name}
+                                    </h4>
+                                    {meal.video_url && (
+                                      <Video className="h-3.5 w-3.5 text-orange-600" />
+                                    )}
+                                  </div>
+                                  {meal.cuisine_type && (
+                                    <span className="text-xs text-gray-500">{meal.cuisine_type}</span>
+                                  )}
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700"
+                                  onClick={() => handleRemoveMealFromDay(meal.day_meal_id)}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full mt-2"
+                              onClick={() => openMealSelector(day.id)}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add Another Meal
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 
