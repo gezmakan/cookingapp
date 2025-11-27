@@ -25,6 +25,7 @@ export default function MealPlanPage() {
   const supabase = createClient()
   const { days, isLoading, error, refetch } = useMealPlanStore(supabase)
 
+  const [isEditMode, setIsEditMode] = useState(false)
   const [isAddDayOpen, setIsAddDayOpen] = useState(false)
   const [dayName, setDayName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -199,10 +200,22 @@ export default function MealPlanPage() {
             <h1 className="text-3xl font-bold text-gray-900">My Meal Plan</h1>
             <p className="text-gray-600 mt-1">Plan your weekly meals</p>
           </div>
-          <Button onClick={() => setIsAddDayOpen(true)} className="bg-orange-600 hover:bg-orange-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Add Day
-          </Button>
+          <div className="flex items-center gap-3">
+            <Button
+              variant={isEditMode ? "default" : "outline"}
+              onClick={() => setIsEditMode(!isEditMode)}
+              className={isEditMode ? "bg-orange-600 hover:bg-orange-700" : ""}
+            >
+              <Edit2 className="h-4 w-4 mr-2" />
+              {isEditMode ? 'Done' : 'Edit'}
+            </Button>
+            {isEditMode && (
+              <Button onClick={() => setIsAddDayOpen(true)} className="bg-orange-600 hover:bg-orange-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Day
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Days List */}
@@ -223,26 +236,30 @@ export default function MealPlanPage() {
                 <CardHeader className="!px-4 !pt-3.5 !pb-3 border-b border-orange-50">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">{day.day_name}</CardTitle>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleDeleteDay(day.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    {isEditMode && (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDeleteDay(day.id)}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="p-4">
                   {day.meals.length === 0 ? (
                     <div className="py-8 text-center">
                       <p className="text-gray-400 mb-3">No meals yet</p>
-                      <Button variant="outline" size="sm" onClick={() => openMealSelector(day.id)}>
-                        <Plus className="h-3 w-3 mr-1" />
-                        Add Meal
-                      </Button>
+                      {isEditMode && (
+                        <Button variant="outline" size="sm" onClick={() => openMealSelector(day.id)}>
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Meal
+                        </Button>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -271,25 +288,29 @@ export default function MealPlanPage() {
                               <span className="text-xs text-gray-500">{meal.cuisine_type}</span>
                             )}
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-600 hover:text-red-700"
-                            onClick={() => handleRemoveMealFromDay(meal.day_meal_id)}
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          {isEditMode && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-600 hover:text-red-700"
+                              onClick={() => handleRemoveMealFromDay(meal.day_meal_id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                         </div>
                       ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full mt-2"
-                        onClick={() => openMealSelector(day.id)}
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Add Another Meal
-                      </Button>
+                      {isEditMode && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2"
+                          onClick={() => openMealSelector(day.id)}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add Another Meal
+                        </Button>
+                      )}
                     </div>
                   )}
                 </CardContent>
