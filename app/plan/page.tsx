@@ -113,7 +113,7 @@ function SortableMealRow({
 
 export default function MealPlanPage() {
   const supabase = createClient()
-  const { days, isLoading, error, refetch } = useMealPlanStore(supabase)
+  const { days, isLoading, error, refetch, updateDayMeals } = useMealPlanStore(supabase)
 
   const [isEditMode, setIsEditMode] = useState(false)
   const [isAddDayOpen, setIsAddDayOpen] = useState(false)
@@ -259,6 +259,9 @@ export default function MealPlanPage() {
     const newIndex = day.meals.findIndex(m => m.day_meal_id === over.id)
 
     const newMeals = arrayMove(day.meals, oldIndex, newIndex)
+    const previousMeals = day.meals
+
+    updateDayMeals(dayId, () => newMeals)
 
     try {
       const updates = newMeals.map((meal, idx) => ({
@@ -273,8 +276,9 @@ export default function MealPlanPage() {
           .eq('id', update.id)
       }
 
-      await refetch()
+      refetch()
     } catch (error) {
+      updateDayMeals(dayId, () => previousMeals)
       console.error('Error reordering meals:', error)
       alert('Failed to reorder meals')
     }
@@ -423,7 +427,7 @@ export default function MealPlanPage() {
         ) : (
           <>
             {/* Active Days */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
               {days.filter(day => day.is_active).map((day) => (
               <Card key={day.id} className="border-orange-100">
                 <CardHeader className="!px-4 !pt-3.5 !pb-3 border-b border-orange-50">
@@ -539,7 +543,7 @@ export default function MealPlanPage() {
             {isEditMode && days.filter(day => !day.is_active).length > 0 && (
               <div className="mt-12">
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">Inactive Days</h2>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                   {days.filter(day => !day.is_active).map((day) => (
                     <Card key={day.id} className="border-gray-300 bg-gray-50">
                       <CardHeader className="!px-4 !pt-3.5 !pb-3 border-b border-gray-200">

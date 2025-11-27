@@ -135,7 +135,7 @@ export default function MealsPage() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar />
-      <div className="max-w-3xl mx-auto px-4 flex-1 w-full md:p-8 pt-4">
+      <div className="max-w-5xl xl:max-w-6xl mx-auto px-4 flex-1 w-full md:p-8 pt-4">
         <div className="mb-4 md:mb-8">
           <div className="flex items-center justify-between gap-3 mt-2 md:mt-4">
             <h1 className="text-2xl md:text-3xl font-bold">Meal Library</h1>
