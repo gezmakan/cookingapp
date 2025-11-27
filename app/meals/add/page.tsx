@@ -13,6 +13,7 @@ import { Toaster } from '@/components/ui/sonner'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import CuisineAutocomplete from '@/components/CuisineAutocomplete'
+import LineItemsInput from '@/components/LineItemsInput'
 
 export default function AddMealPage() {
   const [name, setName] = useState('')
@@ -115,18 +116,13 @@ export default function AddMealPage() {
           </div>
 
           {/* Ingredients */}
-          <div className="space-y-2">
-            <Label htmlFor="ingredients" className="text-sm font-medium">
-              Ingredients
-            </Label>
-            <Textarea
-              id="ingredients"
-              value={ingredients}
-              onChange={(e) => setIngredients(e.target.value)}
-              rows={6}
-              className="w-full font-mono text-sm"
-            />
-          </div>
+          <LineItemsInput
+            id="ingredients"
+            label="Ingredients"
+            value={ingredients}
+            onChange={setIngredients}
+            description="One ingredient per line. Use Enter or the + button to add more."
+          />
 
           {/* Instructions */}
           <div className="space-y-2">

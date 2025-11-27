@@ -38,6 +38,8 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { DayMeal } from '@/types/meals'
+import ShoppingListModal from '@/components/ShoppingListModal'
+import { useIngredientStatus } from '@/hooks/useIngredientStatus'
 
 // Sortable Meal Row Component
 function SortableMealRow({
@@ -156,6 +158,8 @@ export default function MealPlanPage() {
   const weekdayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
   const currentWeekdayName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date()).toLowerCase()
   const selectedDay = selectedDayId ? days?.find((day) => day.id === selectedDayId) : null
+  const [isShoppingListOpen, setIsShoppingListOpen] = useState(false)
+  const ingredientStatus = useIngredientStatus(supabase)
   const handleExportPlan = () => window.print()
 
   const handleSaveTitleSubtitle = async () => {
@@ -516,6 +520,12 @@ export default function MealPlanPage() {
               )}
               <div className="flex items-center gap-3">
                 <Button
+                  className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0 hidden sm:inline-flex"
+                  onClick={() => setIsShoppingListOpen(true)}
+                >
+                  Shopping List
+                </Button>
+                <Button
                   variant={isEditMode ? "default" : "outline"}
                   onClick={() => setIsEditMode(!isEditMode)}
                   className={isEditMode ? "bg-orange-600 hover:bg-orange-700" : ""}
@@ -783,13 +793,28 @@ export default function MealPlanPage() {
                   <div className="absolute -left-10 bottom-0 w-72 h-72 bg-rose-200/30 blur-3xl" />
                   <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 0)' }} />
                 </div>
-                <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
                   <div className="flex-1">
-                  <div className="flex items-center gap-3 mt-1">
-                    <h1 className="text-4xl md:text-5xl font-semibold">{menuTitle}</h1>
-                    <Sparkles className="h-6 w-6 text-orange-200" />
+                    <div className="flex items-center gap-3 mt-1">
+                      <h1 className="text-4xl md:text-5xl font-semibold">{menuTitle}</h1>
+                      <Sparkles className="h-6 w-6 text-orange-200" />
+                    </div>
+                    {heroSubtitle && <p className="text-lg text-orange-50/80 mt-2 max-w-2xl">{heroSubtitle}</p>}
                   </div>
-                  {heroSubtitle && <p className="text-lg text-orange-50/80 mt-2 max-w-2xl">{heroSubtitle}</p>}
+                  <div className="flex flex-wrap gap-3 print:hidden mt-2 lg:mt-0">
+                    <Button
+                      className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
+                      onClick={() => setIsEditMode(true)}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                      Edit Plan
+                    </Button>
+                    <Button
+                      className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
+                      onClick={() => setIsShoppingListOpen(true)}
+                    >
+                      Shopping List
+                    </Button>
                   </div>
                 </div>
               </div>
@@ -870,15 +895,6 @@ export default function MealPlanPage() {
                       </div>
                     )
                   })}
-                </div>
-                <div className="flex justify-center mt-12 print:hidden">
-                  <Button
-                    className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
-                    onClick={() => setIsEditMode(true)}
-                  >
-                    <Edit2 className="h-4 w-4" />
-                    Edit Plan
-                  </Button>
                 </div>
               </>
             ) : (
@@ -1061,6 +1077,15 @@ export default function MealPlanPage() {
           meal={selectedVideo.meal}
         />
       )}
+
+      <ShoppingListModal
+        isOpen={isShoppingListOpen}
+        onClose={() => setIsShoppingListOpen(false)}
+        days={days || []}
+        statusMap={ingredientStatus.statusMap}
+        onToggleIngredient={ingredientStatus.setIngredientStatus}
+        onReset={ingredientStatus.resetStatuses}
+      />
 
       <Footer />
     </div>

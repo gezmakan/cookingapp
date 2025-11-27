@@ -10,6 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Globe, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
 import CuisineAutocomplete from '@/components/CuisineAutocomplete'
+import LineItemsInput from '@/components/LineItemsInput'
 
 type EditMealModalProps = {
   isOpen: boolean
@@ -141,7 +142,7 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
           <div className="space-y-4 py-4">
             {/* Name */}
             <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
-              <Label htmlFor="edit-name" className="md:w-32 md:flex-shrink-0">Meal Name *</Label>
+              <Label htmlFor="edit-name" className="md:w-32 md:shrink-0">Meal Name *</Label>
               <Input
                 id="edit-name"
                 value={formData.name}
@@ -152,7 +153,7 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
 
             {/* Cuisine Type */}
             <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
-              <Label htmlFor="edit-cuisine" className="md:w-32 md:flex-shrink-0">Cuisine Type</Label>
+              <Label htmlFor="edit-cuisine" className="md:w-32 md:shrink-0">Cuisine Type</Label>
               <CuisineAutocomplete
                 id="edit-cuisine"
                 value={formData.cuisine_type}
@@ -161,16 +162,13 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
             </div>
 
             {/* Ingredients */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-ingredients">Ingredients</Label>
-              <Textarea
-                id="edit-ingredients"
-                value={formData.ingredients}
-                onChange={(e) => setFormData({ ...formData, ingredients: e.target.value })}
-                rows={4}
-                className="font-mono text-sm"
-              />
-            </div>
+            <LineItemsInput
+              id="edit-ingredients"
+              label="Ingredients"
+              value={formData.ingredients}
+              onChange={(value) => setFormData({ ...formData, ingredients: value })}
+              description="One ingredient per line. Use Enter or the + button to add more."
+            />
 
             {/* Instructions */}
             <div className="space-y-2">
@@ -185,7 +183,7 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
 
             {/* Video URL */}
             <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
-              <Label htmlFor="edit-video" className="md:w-32 md:flex-shrink-0">YouTube Link</Label>
+              <Label htmlFor="edit-video" className="md:w-32 md:shrink-0">YouTube Link</Label>
               <Input
                 id="edit-video"
                 type="url"
