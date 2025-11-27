@@ -240,7 +240,7 @@ export default function MealsPage() {
       <Navbar searchQuery={searchQuery} onSearchChange={handleSearchChange} />
       <div className="max-w-5xl xl:max-w-6xl mx-auto px-4 flex-1 w-full md:p-8 pt-4">
         <div className="mb-5 md:mb-10">
-          <div className="relative overflow-hidden rounded-3xl bg-[#1c120a] text-white px-6 py-8 md:px-10 md:py-12 shadow-[0px_30px_80px_rgba(0,0,0,0.25)]">
+          <div className="relative overflow-hidden rounded-3xl bg-[#1c120a] text-white px-5 py-5 md:px-9 md:py-8 shadow-[0px_30px_80px_rgba(0,0,0,0.25)]">
             <div className="absolute inset-0">
               <div className="absolute inset-0 bg-gradient-to-r from-orange-900/80 via-orange-600/70 to-rose-500/70" />
               <div className="absolute -right-8 top-0 w-64 h-64 bg-orange-200/40 blur-3xl" />
@@ -252,7 +252,6 @@ export default function MealsPage() {
             </div>
             <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
               <div className="max-w-2xl">
-                <p className="text-xs uppercase tracking-[0.4em] text-white/60">Your Recipe Hub</p>
                 <div className="flex items-center gap-3 mt-2">
                   <h1 className="text-3xl md:text-4xl font-semibold">Recipes</h1>
                   <Sparkles className="h-6 w-6 text-orange-200" />
@@ -261,21 +260,6 @@ export default function MealsPage() {
                   Save every favorite dish, tweak the details, and keep your go-to recipes in one place.
                 </p>
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Mobile search bar */}
-        <div className="mb-4 md:hidden">
-          <div className="flex items-center gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
-              <Input
-                placeholder="Search meals..."
-                value={searchQuery}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-10 w-full"
-              />
             </div>
           </div>
         </div>

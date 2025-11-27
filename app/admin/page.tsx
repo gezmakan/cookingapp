@@ -66,6 +66,15 @@ export default function AdminPage() {
     setIsLoading(false)
   }
 
+  const fetchUserEmailsRpc = async () => {
+    const { data, error } = await supabase.rpc('get_user_emails')
+    if (!error) return data
+
+    const { data: fallbackData, error: fallbackError } = await supabase.rpc('get_all_user_emails')
+    if (fallbackError) throw fallbackError
+    return fallbackData
+  }
+
   const fetchUsers = async () => {
     try {
       const { data: mealsData, error } = await supabase
@@ -83,26 +92,15 @@ export default function AdminPage() {
       })
 
       // Get all user emails using the admin function
-      const { data: userEmails, error: emailError } = await supabase
-        .rpc('get_all_user_emails')
-
-      if (emailError) {
-        console.error('Error fetching user emails:', emailError)
-        return
-      }
+      const userEmails = await fetchUserEmailsRpc()
 
       // Create users list with all users who have meals
-      const usersList: User[] = []
-      userEmails?.forEach((u: any) => {
-        if (userMealCounts[u.user_id]) {
-          usersList.push({
-            id: u.user_id,
-            email: u.email || 'Unknown',
-            created_at: new Date().toISOString(), // We don't have created_at from this query
-            meal_count: userMealCounts[u.user_id]
-          })
-        }
-      })
+      const usersList: User[] = (userEmails || []).map((u: any) => ({
+        id: u.user_id,
+        email: u.email || 'Unknown',
+        created_at: u.created_at || new Date().toISOString(),
+        meal_count: userMealCounts[u.user_id] || 0,
+      }))
 
       setUsers(usersList)
     } catch (error) {
@@ -120,12 +118,7 @@ export default function AdminPage() {
       if (error) throw error
 
       // Get all user emails using the admin function
-      const { data: userEmails, error: emailError } = await supabase
-        .rpc('get_all_user_emails')
-
-      if (emailError) {
-        console.error('Error fetching user emails:', emailError)
-      }
+      const userEmails = await fetchUserEmailsRpc()
 
       // Create a map of user_id to email
       const emailMap: { [key: string]: string } = {}
@@ -185,6 +178,19 @@ export default function AdminPage() {
     } catch (error) {
       console.error('Error deleting meal:', error)
       alert('Failed to delete meal')
+    }
+  }
+
+  const deleteUser = async (userToDelete: User) => {
+    if (!confirm(`Delete ${userToDelete.email} and all of their data? This cannot be undone.`)) return
+    try {
+      const { error } = await supabase.rpc('admin_delete_user', { target_user_id: userToDelete.id })
+      if (error) throw error
+      await Promise.all([fetchUsers(), fetchAllMeals()])
+      alert('User deleted successfully.')
+    } catch (error) {
+      console.error('Error deleting user:', error)
+      alert('Failed to delete user')
     }
   }
 
@@ -316,13 +322,14 @@ export default function AdminPage() {
                     <TableHead>Email</TableHead>
                     <TableHead>Meals</TableHead>
                     <TableHead>Joined</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {users.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center text-gray-500 py-8">
-                        No users with meals found
+                      <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                        No users found
                       </TableCell>
                     </TableRow>
                   ) : (
@@ -332,6 +339,18 @@ export default function AdminPage() {
                         <TableCell>{user.meal_count}</TableCell>
                         <TableCell className="text-sm text-gray-600">
                           {new Date(user.created_at).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700 disabled:opacity-40"
+                            onClick={() => deleteUser(user)}
+                            disabled={isAdmin(user.email)}
+                            title={isAdmin(user.email) ? 'Cannot delete primary admin' : 'Delete user'}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))

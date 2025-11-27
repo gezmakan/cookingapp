@@ -93,7 +93,12 @@ export default function Footer() {
             )}
           </div>
         </div>
-        <div className="text-center text-xs text-gray-400">© CookMe</div>
+        <div className="text-center text-xs text-gray-400 space-y-1">
+          {user && (
+            <p className="text-gray-500">Logged in as <span className="font-medium text-gray-700">{user.email}</span></p>
+          )}
+          <p>© Yummii</p>
+        </div>
       </div>
     </footer>
   )

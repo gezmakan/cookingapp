@@ -17,6 +17,8 @@ type MealPlanState = {
   error: string | null
 }
 
+const DEFAULT_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+
 export function useMealPlanStore(supabase: SupabaseClient) {
   const [state, setState] = useState<MealPlanState>({
     days: [],
@@ -26,6 +28,19 @@ export function useMealPlanStore(supabase: SupabaseClient) {
 
   const isMountedRef = useRef(false)
   const initialLoadRef = useRef(true)
+  const defaultDaysSeededRef = useRef(false)
+
+  const seedDefaultDays = useCallback(async (userId: string) => {
+    const rows = DEFAULT_DAY_NAMES.map((name, idx) => ({
+      user_id: userId,
+      day_name: name,
+      order_index: idx,
+      is_active: true,
+    }))
+
+    const { error } = await supabase.from('meal_plan_days').insert(rows)
+    if (error) throw error
+  }, [supabase])
 
   const fetchPlan = useCallback(async (showLoading: boolean) => {
     if (showLoading) {
@@ -49,6 +64,7 @@ export function useMealPlanStore(supabase: SupabaseClient) {
           })
         }
         initialLoadRef.current = false
+        defaultDaysSeededRef.current = false
         return
       }
 
@@ -62,6 +78,17 @@ export function useMealPlanStore(supabase: SupabaseClient) {
 
       const dayIds = (days ?? []).map((day) => day.id)
       let dayMeals: DayMealRecord[] = []
+
+      if ((days ?? []).length === 0 && !defaultDaysSeededRef.current) {
+        try {
+          defaultDaysSeededRef.current = true
+          await seedDefaultDays(userId)
+          await fetchPlan(showLoading)
+          return
+        } catch (seedError) {
+          console.error('Error seeding default meal plan days:', seedError)
+        }
+      }
 
       if (dayIds.length > 0) {
         const { data: dayMealsData, error: dayMealsError } = await supabase

@@ -42,9 +42,9 @@ export default function Navbar({ searchQuery, onSearchChange }: NavbarProps) {
             <span>Yummii</span>
           </Link>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-1 justify-end">
             {isMealsPage && onSearchChange && (
-              <div className="relative w-48 hidden md:block">
+              <div className="relative w-40">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
                 <Input
                   placeholder="Search meals..."

@@ -155,6 +155,7 @@ export default function MealPlanPage() {
   const heroSubtitle = menuSubtitle || 'Plan your weekly meals'
   const weekdayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
   const currentWeekdayName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date()).toLowerCase()
+  const selectedDay = selectedDayId ? days?.find((day) => day.id === selectedDayId) : null
 
   const handleSaveTitleSubtitle = async () => {
     try {
@@ -393,6 +394,9 @@ export default function MealPlanPage() {
 
   const openMealSelector = async (dayId: string) => {
     setSelectedDayId(dayId)
+    setEditingDayId(dayId)
+    const day = days?.find((d) => d.id === dayId)
+    setEditingDayName(day?.day_name || '')
     setIsSelectMealOpen(true)
     setMealSearch('')
 
@@ -405,7 +409,6 @@ export default function MealPlanPage() {
       const { data, error } = await supabase
         .from('meals')
         .select('*')
-        .eq('user_id', user.id)
         .order('name', { ascending: true })
 
       if (error) throw error
@@ -772,7 +775,7 @@ export default function MealPlanPage() {
                 {titleEditor}
               </div>
             ) : (
-              <div className="relative overflow-hidden rounded-3xl bg-[#1c120a] text-white p-8 md:p-12 mb-10 shadow-[0px_30px_80px_rgba(0,0,0,0.25)]">
+              <div className="relative overflow-hidden rounded-3xl bg-[#1c120a] text-white px-5 py-5 md:px-9 md:py-8 mb-10 shadow-[0px_30px_80px_rgba(0,0,0,0.25)]">
                 <div className="absolute inset-0">
                   <div className="absolute inset-0 bg-gradient-to-r from-orange-900/80 via-orange-700/70 to-rose-500/70" />
                   <div className="absolute -right-10 top-0 w-72 h-72 bg-orange-200/40 blur-3xl" />
@@ -801,8 +804,10 @@ export default function MealPlanPage() {
                     return (
                       <div
                         key={day.id}
-                        className={`group relative overflow-hidden rounded-3xl shadow-[0px_25px_70px_rgba(0,0,0,0.08)] border transition-colors ${
-                          isToday ? 'bg-white border-amber-200' : 'bg-white border-white/70'
+                        className={`group relative overflow-hidden rounded-3xl shadow-[0px_25px_70px_rgba(0,0,0,0.08)] border transition-all ${
+                          isToday
+                            ? 'bg-white border-transparent ring-2 ring-orange-200 shadow-[0px_25px_80px_rgba(253,186,116,0.35)]'
+                            : 'bg-white border-white/70'
                         }`}
                       >
                         <div className="relative p-6 space-y-5">
@@ -817,14 +822,23 @@ export default function MealPlanPage() {
                             )}
                           </div>
                           <div className="space-y-3">
-                            {day.meals.length === 0 ? (
-                              <div className="rounded-2xl border border-dashed border-gray-200 p-6 text-center text-gray-400">
-                                Awaiting chef&apos;s selection
-                              </div>
-                            ) : (
-                              day.meals.map((meal) => (
-                                <div
-                                  key={meal.day_meal_id}
+                          {day.meals.length === 0 ? (
+                            <button
+                              type="button"
+                              className="w-full rounded-2xl border border-dashed border-gray-200 p-6 text-center text-orange-500 hover:border-orange-300 hover:text-orange-600 transition-all"
+                              onClick={() => {
+                                setIsEditMode(true)
+                                setEditingDayId(day.id)
+                                setEditingDayName(day.day_name)
+                                openMealSelector(day.id)
+                              }}
+                            >
+                              Add meals
+                            </button>
+                          ) : (
+                            day.meals.map((meal) => (
+                              <div
+                                key={meal.day_meal_id}
                                   className={`rounded-2xl border border-transparent bg-gray-50/90 px-4 py-3 transition-all ${
                                     meal.video_url ? 'cursor-pointer hover:border-orange-200 hover:bg-white' : ''
                                   }`}
@@ -858,11 +872,11 @@ export default function MealPlanPage() {
                 </div>
                 <div className="flex justify-center mt-12">
                   <Button
-                    className="bg-gray-900 text-white hover:bg-gray-800 shadow-lg"
+                    className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
                     onClick={() => setIsEditMode(true)}
                   >
                     <Edit2 className="h-4 w-4" />
-                    Curate Menu
+                    Edit Plan
                   </Button>
                 </div>
               </>
@@ -937,9 +951,9 @@ export default function MealPlanPage() {
       <Dialog open={isSelectMealOpen} onOpenChange={setIsSelectMealOpen}>
         <DialogContent className="max-w-2xl max-h-[80vh]">
           <DialogHeader>
-            <DialogTitle>Add Meal to Day</DialogTitle>
+            <DialogTitle>Add Meal to {selectedDay?.day_name || menuTitle}</DialogTitle>
             <DialogDescription>
-              Choose a meal from your library to add to this day
+              Choose a meal from your library to add to {selectedDay?.day_name || 'this plan'}
             </DialogDescription>
           </DialogHeader>
 
