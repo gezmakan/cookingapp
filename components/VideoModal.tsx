@@ -2,12 +2,16 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-type Exercise = {
-  sets: number
-  reps: string
-  rest_minutes: number
-  rest_seconds: number
-  muscle_groups: string | null
+type Meal = {
+  id: string
+  user_id: string
+  name: string
+  ingredients: string | null
+  instructions: string | null
+  video_url: string | null
+  cuisine_type: string | null
+  is_private: boolean
+  created_at: string
 }
 
 type VideoModalProps = {
@@ -15,7 +19,7 @@ type VideoModalProps = {
   onClose: () => void
   videoUrl: string
   title: string
-  exercise?: Exercise
+  meal?: Meal
 }
 
 // Convert YouTube URL to embed URL
@@ -30,12 +34,12 @@ function getYouTubeEmbedUrl(url: string): string {
   return videoId ? `https://www.youtube.com/embed/${videoId}` : url
 }
 
-export default function VideoModal({ isOpen, onClose, videoUrl, title, exercise }: VideoModalProps) {
+export default function VideoModal({ isOpen, onClose, videoUrl, title, meal }: VideoModalProps) {
   const embedUrl = getYouTubeEmbedUrl(videoUrl)
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:!max-w-[960px] w-[90vw]">
+      <DialogContent className="sm:!max-w-[960px] w-[90vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
@@ -48,24 +52,24 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title, exercise 
             allowFullScreen
           />
         </div>
-        {exercise && (
-          <div className="mt-4 pt-4 border-t grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <span className="text-gray-600 font-medium">Sets:</span>
-              <span className="ml-2">{exercise.sets}</span>
-            </div>
-            <div>
-              <span className="text-gray-600 font-medium">Reps:</span>
-              <span className="ml-2">{exercise.reps}</span>
-            </div>
-            <div>
-              <span className="text-gray-600 font-medium">Rest:</span>
-              <span className="ml-2">{exercise.rest_minutes}m {exercise.rest_seconds}s</span>
-            </div>
-            <div>
-              <span className="text-gray-600 font-medium">Muscle Groups:</span>
-              <span className="ml-2">{exercise.muscle_groups || '-'}</span>
-            </div>
+        {meal && (meal.ingredients || meal.instructions) && (
+          <div className="mt-4 pt-4 border-t space-y-4">
+            {meal.ingredients && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Ingredients</h3>
+                <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono bg-gray-50 p-3 rounded">
+                  {meal.ingredients}
+                </pre>
+              </div>
+            )}
+            {meal.instructions && (
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">Instructions</h3>
+                <pre className="text-sm text-gray-700 whitespace-pre-wrap bg-gray-50 p-3 rounded">
+                  {meal.instructions}
+                </pre>
+              </div>
+            )}
           </div>
         )}
       </DialogContent>

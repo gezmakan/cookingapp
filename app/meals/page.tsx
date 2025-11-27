@@ -231,7 +231,16 @@ export default function MealsPage() {
                     {/* Content */}
                     <div className="p-4">
                       <div className="flex items-start justify-between gap-2 mb-2">
-                        <h3 className="font-semibold text-lg text-gray-900 line-clamp-2 flex-1">
+                        <h3
+                          className={`font-semibold text-lg text-gray-900 line-clamp-2 flex-1 ${
+                            meal.video_url ? 'cursor-pointer hover:text-orange-600 transition-colors' : ''
+                          }`}
+                          onClick={() => {
+                            if (meal.video_url) {
+                              setSelectedVideo({ url: meal.video_url, title: meal.name, meal })
+                            }
+                          }}
+                        >
                           {meal.name}
                         </h3>
                         {user && (
@@ -262,12 +271,6 @@ export default function MealsPage() {
                           {meal.is_private ? 'Private' : 'Public'}
                         </span>
                       </div>
-
-                      {meal.ingredients && (
-                        <p className="text-sm text-gray-500 mt-2 line-clamp-2">
-                          {meal.ingredients.split('\n')[0]}
-                        </p>
-                      )}
                     </div>
                   </div>
                 )
@@ -297,6 +300,7 @@ export default function MealsPage() {
           onClose={() => setSelectedVideo(null)}
           videoUrl={selectedVideo.url}
           title={selectedVideo.title}
+          meal={selectedVideo.meal}
         />
       )}
 
