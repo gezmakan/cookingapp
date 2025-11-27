@@ -19,16 +19,22 @@ type MealPlanState = {
 
 const DEFAULT_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
+// Cache to prevent unnecessary refetches
+let cachedData: MealPlanDay[] | null = null
+let lastFetchTime = 0
+const CACHE_DURATION = 5000 // 5 seconds - shorter to avoid stale data
+
 export function useMealPlanStore(supabase: SupabaseClient) {
   const [state, setState] = useState<MealPlanState>({
-    days: [],
-    isLoading: true,
+    days: cachedData || [],
+    isLoading: !cachedData,
     error: null,
   })
 
   const isMountedRef = useRef(false)
   const initialLoadRef = useRef(true)
   const defaultDaysSeededRef = useRef(false)
+  const isFetchingRef = useRef(false)
 
   const seedDefaultDays = useCallback(async (userId: string) => {
     const rows = DEFAULT_DAY_NAMES.map((name, idx) => ({
@@ -42,7 +48,28 @@ export function useMealPlanStore(supabase: SupabaseClient) {
     if (error) throw error
   }, [supabase])
 
-  const fetchPlan = useCallback(async (showLoading: boolean) => {
+  const fetchPlan = useCallback(async (showLoading: boolean, force: boolean = false) => {
+    // Check cache first
+    const now = Date.now()
+    if (!force && cachedData && (now - lastFetchTime) < CACHE_DURATION) {
+      if (isMountedRef.current) {
+        setState({
+          days: cachedData,
+          isLoading: false,
+          error: null,
+        })
+      }
+      initialLoadRef.current = false
+      return
+    }
+
+    // Prevent concurrent fetches
+    if (isFetchingRef.current) {
+      console.log('Fetch already in progress, skipping...')
+      return
+    }
+    isFetchingRef.current = true
+
     if (showLoading) {
       setState((prev) => ({ ...prev, isLoading: true, error: null }))
     } else {
@@ -57,6 +84,8 @@ export function useMealPlanStore(supabase: SupabaseClient) {
 
       if (!userId) {
         if (isMountedRef.current) {
+          cachedData = []
+          lastFetchTime = Date.now()
           setState({
             days: [],
             isLoading: false,
@@ -65,6 +94,7 @@ export function useMealPlanStore(supabase: SupabaseClient) {
         }
         initialLoadRef.current = false
         defaultDaysSeededRef.current = false
+        isFetchingRef.current = false
         return
       }
 
@@ -82,8 +112,9 @@ export function useMealPlanStore(supabase: SupabaseClient) {
       if ((days ?? []).length === 0 && !defaultDaysSeededRef.current) {
         try {
           defaultDaysSeededRef.current = true
+          isFetchingRef.current = false // Reset before recursive call
           await seedDefaultDays(userId)
-          await fetchPlan(showLoading)
+          await fetchPlan(showLoading, true)
           return
         } catch (seedError) {
           console.error('Error seeding default meal plan days:', seedError)
@@ -135,6 +166,10 @@ export function useMealPlanStore(supabase: SupabaseClient) {
       })
 
       if (isMountedRef.current) {
+        // Update cache
+        cachedData = daysWithMeals
+        lastFetchTime = Date.now()
+
         setState({
           days: daysWithMeals,
           isLoading: false,
@@ -152,15 +187,17 @@ export function useMealPlanStore(supabase: SupabaseClient) {
       }
     } finally {
       initialLoadRef.current = false
+      isFetchingRef.current = false
     }
-  }, [supabase])
+  }, [supabase, seedDefaultDays])
 
   useEffect(() => {
     isMountedRef.current = true
-    fetchPlan(true)
+    // Always force fetch on mount to ensure we have fresh data
+    fetchPlan(true, false)
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchPlan(true)
+      fetchPlan(true, true) // Force refresh on auth changes
     })
 
     return () => {
@@ -170,7 +207,7 @@ export function useMealPlanStore(supabase: SupabaseClient) {
   }, [fetchPlan, supabase])
 
   const refetch = useCallback(async () => {
-    await fetchPlan(initialLoadRef.current)
+    await fetchPlan(initialLoadRef.current, true) // Force refresh on manual refetch
   }, [fetchPlan])
 
   const updateDayMeals = useCallback((dayId: string, updateFn: (meals: MealPlanDay['meals']) => MealPlanDay['meals']) => {

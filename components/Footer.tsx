@@ -30,11 +30,11 @@ export default function Footer() {
     <footer className="bg-white border-t mt-auto">
       <div className="max-w-7xl mx-auto px-4 md:px-8 py-4 space-y-2">
         <div className="flex flex-col items-center gap-2 text-xs text-gray-500">
-          <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-sm font-semibold">
             <Link
               href="/meals"
               className={`${
-                pathname === '/meals' ? 'text-orange-600' : 'hover:text-orange-600'
+                pathname === '/meals' ? 'text-orange-600' : 'text-gray-700 hover:text-orange-600'
               }`}
             >
               Meal Library
@@ -43,7 +43,7 @@ export default function Footer() {
               <Link
                 href="/plan"
                 className={`${
-                  pathname === '/plan' ? 'text-orange-600' : 'hover:text-orange-600'
+                  pathname === '/plan' ? 'text-orange-600' : 'text-gray-700 hover:text-orange-600'
                 }`}
               >
                 Meal Plan
@@ -52,13 +52,13 @@ export default function Footer() {
             <Link
               href={user ? '/meals/add' : '/signup'}
               className={`${
-                pathname === (user ? '/meals/add' : '/signup') ? 'text-orange-600' : 'hover:text-orange-600'
+                pathname === (user ? '/meals/add' : '/signup') ? 'text-orange-600' : 'text-gray-700 hover:text-orange-600'
               }`}
             >
               Add Recipe
             </Link>
           </div>
-          <div className="flex items-center justify-center gap-6 flex-wrap">
+          <div className="flex items-center justify-center gap-6 flex-wrap mt-4">
             <Link
               href="/terms"
               className={`${
@@ -83,19 +83,19 @@ export default function Footer() {
             >
               About
             </Link>
-            {user && (
-              <button
-                onClick={handleLogout}
-                className="text-xs text-gray-500 hover:text-orange-600"
-              >
-                Logout
-              </button>
-            )}
           </div>
         </div>
         <div className="text-center text-xs text-gray-400 space-y-1">
           {user && (
-            <p className="text-gray-500">Logged in as <span className="font-medium text-gray-700">{user.email}</span></p>
+            <p className="text-gray-500">
+              Logged in as <span className="font-medium text-gray-700">{user.email}</span>{' '}
+              (<button
+                onClick={handleLogout}
+                className="text-orange-600 hover:underline"
+              >
+                logout
+              </button>)
+            </p>
           )}
           <button
             type="button"
