@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Plus, Edit, Video, Search, Lock, Globe } from 'lucide-react'
+import { Plus, Edit, Video, Search, Lock, Globe, Sparkles } from 'lucide-react'
 import VideoModal from '@/components/VideoModal'
 import EditMealModal from '@/components/EditMealModal'
 import Footer from '@/components/Footer'
@@ -33,6 +33,8 @@ export default function MealsPage() {
   const [showAll, setShowAll] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null)
+  const [showMineOnly, setShowMineOnly] = useState(false)
+  const [filtersLoaded, setFiltersLoaded] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -78,6 +80,14 @@ export default function MealsPage() {
   // Filter meals
   const filteredMeals = meals
     .filter(meal => {
+      if (showMineOnly) {
+        if (!user) {
+          return false
+        }
+        if (meal.user_id !== user.id) {
+          return false
+        }
+      }
       // Filter by cuisine type if selected
       if (selectedCuisine && meal.cuisine_type !== selectedCuisine) {
         return false
@@ -104,11 +114,72 @@ export default function MealsPage() {
     .map(({ meal }) => meal)
 
   const displayedMeals = showAll ? filteredMeals : filteredMeals.slice(0, MEALS_PER_PAGE)
+  const handlePrimaryCta = () => {
+    router.push(user ? '/meals/add' : '/signup')
+  }
+  const primaryCtaLabel = user ? 'Add Recipe' : 'Join to Add'
 
   useEffect(() => {
     checkUser()
     fetchMeals()
   }, [])
+
+  useEffect(() => {
+    const loadFilterPreferences = async () => {
+      if (!user) {
+        setFiltersLoaded(true)
+        return
+      }
+      setFiltersLoaded(false)
+      try {
+        const { data, error } = await supabase
+          .from('user_preferences')
+          .select('meal_filter_cuisine, meal_filter_show_mine, meal_filter_search')
+          .eq('user_id', user.id)
+          .single()
+
+        if (!error && data) {
+          setSelectedCuisine(data.meal_filter_cuisine || null)
+          setShowMineOnly(!!data.meal_filter_show_mine)
+          setSearchQuery(data.meal_filter_search || '')
+        }
+      } catch (error) {
+        console.error('Error loading meal filter preferences:', error)
+      } finally {
+        setFiltersLoaded(true)
+      }
+    }
+
+    loadFilterPreferences()
+  }, [user])
+
+  useEffect(() => {
+    if (!user && showMineOnly) {
+      setShowMineOnly(false)
+    }
+  }, [user, showMineOnly])
+
+  useEffect(() => {
+    if (!user || !filtersLoaded) return
+
+    const persistFilters = async () => {
+      try {
+        await supabase
+          .from('user_preferences')
+          .upsert({
+            user_id: user.id,
+            meal_filter_cuisine: selectedCuisine,
+            meal_filter_show_mine: showMineOnly,
+            meal_filter_search: searchQuery,
+            updated_at: new Date().toISOString(),
+          }, { onConflict: 'user_id' })
+      } catch (error) {
+        console.error('Error saving meal filter preferences:', error)
+      }
+    }
+
+    persistFilters()
+  }, [selectedCuisine, showMineOnly, searchQuery, user, filtersLoaded])
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -144,9 +215,29 @@ export default function MealsPage() {
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <div className="max-w-5xl xl:max-w-6xl mx-auto px-4 flex-1 w-full md:p-8 pt-4">
-        <div className="mb-4 md:mb-8">
-          <div className="flex items-center justify-between gap-3 mt-2 md:mt-4">
-            <h1 className="text-2xl md:text-3xl font-bold">Recipes</h1>
+        <div className="mb-5 md:mb-10">
+          <div className="relative overflow-hidden rounded-3xl bg-[#1c120a] text-white px-6 py-8 md:px-10 md:py-12 shadow-[0px_30px_80px_rgba(0,0,0,0.25)]">
+            <div className="absolute inset-0">
+              <div className="absolute inset-0 bg-gradient-to-r from-orange-900/80 via-orange-600/70 to-rose-500/70" />
+              <div className="absolute -right-8 top-0 w-64 h-64 bg-orange-200/40 blur-3xl" />
+              <div className="absolute -left-8 bottom-0 w-64 h-64 bg-rose-200/30 blur-3xl" />
+              <div
+                className="absolute inset-0 opacity-20"
+                style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 0)' }}
+              />
+            </div>
+            <div className="relative z-10 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+              <div className="max-w-2xl">
+                <p className="text-xs uppercase tracking-[0.4em] text-white/60">Your Recipe Hub</p>
+                <div className="flex items-center gap-3 mt-2">
+                  <h1 className="text-3xl md:text-4xl font-semibold">Recipes</h1>
+                  <Sparkles className="h-6 w-6 text-orange-200" />
+                </div>
+                <p className="text-base md:text-lg text-white/80 mt-3">
+                  Save every favorite dish, tweak the details, and keep your go-to recipes in one place.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -162,15 +253,6 @@ export default function MealsPage() {
                 className="pl-10 w-full"
               />
             </div>
-            {user ? (
-              <Button onClick={() => router.push('/meals/add')} size="sm" variant="outline" className="flex-shrink-0">
-                <Plus className="h-4 w-4 mr-2" /> Add
-              </Button>
-            ) : (
-              <Button onClick={() => router.push('/signup')} size="sm" className="flex-shrink-0 bg-orange-500 hover:bg-orange-600 text-white">
-                <Plus className="h-4 w-4 mr-2" /> Add
-              </Button>
-            )}
           </div>
         </div>
 
@@ -184,7 +266,7 @@ export default function MealsPage() {
         ) : (
           <>
             <div className="bg-white md:rounded-lg border-y md:border -mx-4 md:mx-0 px-4 py-3 mb-4 flex items-center justify-between gap-3 overflow-x-auto">
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-2 min-w-0 flex-wrap">
                 <button
                   onClick={() => setSelectedCuisine(null)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
@@ -208,13 +290,19 @@ export default function MealsPage() {
                     {cuisine}
                   </button>
                 ))}
+                {user && (
+                  <button
+                    onClick={() => setShowMineOnly((prev) => !prev)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap border ${
+                      showMineOnly
+                        ? 'bg-orange-500 text-white border-orange-500'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                    }`}
+                  >
+                    My Recipes
+                  </button>
+                )}
               </div>
-
-              {user && (
-                <Button onClick={() => router.push('/meals/add')} size="sm" variant="outline" className="hidden md:flex flex-shrink-0">
-                  <Plus className="h-4 w-4 mr-2" /> Add Meal
-                </Button>
-              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -329,10 +417,19 @@ export default function MealsPage() {
                 </Button>
               </div>
             )}
+
+            <div className="flex justify-center mt-10 pb-6">
+              <Button
+                className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
+                onClick={handlePrimaryCta}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                {primaryCtaLabel}
+              </Button>
+            </div>
           </>
         )}
       </div>
-
       <Footer />
 
       {selectedVideo && (

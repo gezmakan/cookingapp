@@ -49,6 +49,14 @@ export default function Footer() {
                 Meal Plan
               </Link>
             )}
+            <Link
+              href={user ? '/meals/add' : '/signup'}
+              className={`${
+                pathname === (user ? '/meals/add' : '/signup') ? 'text-orange-600' : 'hover:text-orange-600'
+              }`}
+            >
+              Add Recipe
+            </Link>
           </div>
           <div className="flex items-center justify-center gap-6 flex-wrap">
             <Link
