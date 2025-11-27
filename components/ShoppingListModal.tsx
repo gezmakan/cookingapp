@@ -42,6 +42,7 @@ const splitIngredients = (text?: string | null) => {
     .split('\n')
     .flatMap((line) => line.split(','))
     .map((item) => item.trim())
+    .map((item) => item.replace(/^[-•*]\s*/, '')) // Remove leading dashes, bullets, or asterisks
     .filter(Boolean)
 }
 

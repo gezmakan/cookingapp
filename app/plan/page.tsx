@@ -482,8 +482,12 @@ export default function MealPlanPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-orange-600" />
-          <p className="text-gray-600">Loading your meal plan...</p>
+          <div className="relative">
+            <UtensilsCrossed className="h-16 w-16 mx-auto mb-4 text-orange-600 animate-pulse" />
+            <Sparkles className="h-6 w-6 absolute top-0 right-1/4 text-orange-400 animate-bounce" />
+          </div>
+          <p className="text-2xl font-bold text-gray-800 mb-2">Whipping up your plan...</p>
+          <p className="text-sm text-gray-500">Getting everything ready for you</p>
         </div>
       </div>
     )
@@ -520,12 +524,6 @@ export default function MealPlanPage() {
               )}
               <div className="flex items-center gap-3">
                 <Button
-                  className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0 hidden sm:inline-flex"
-                  onClick={() => setIsShoppingListOpen(true)}
-                >
-                  Shopping List
-                </Button>
-                <Button
                   variant={isEditMode ? "default" : "outline"}
                   onClick={() => setIsEditMode(!isEditMode)}
                   className={isEditMode ? "bg-orange-600 hover:bg-orange-700" : ""}
@@ -533,12 +531,6 @@ export default function MealPlanPage() {
                   <Edit2 className="h-4 w-4 mr-2" />
                   {isEditMode ? 'Done' : 'Edit'}
                 </Button>
-                {isEditMode && (
-                  <Button onClick={() => setIsAddDayOpen(true)} className="bg-orange-600 hover:bg-orange-700">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Day
-                  </Button>
-                )}
               </div>
             </div>
 
@@ -664,6 +656,17 @@ export default function MealPlanPage() {
                     </CardContent>
                   </Card>
                 ))}
+
+                {isEditMode && (
+                  <Card className="border-2 border-dashed border-gray-300 hover:border-orange-400 transition-colors cursor-pointer" onClick={() => setIsAddDayOpen(true)}>
+                    <CardContent className="flex items-center justify-center py-20">
+                      <div className="text-center">
+                        <Plus className="h-12 w-12 mx-auto mb-3 text-gray-400" />
+                        <p className="text-gray-600 font-medium">Add Day</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
                 </div>
 
                 {isEditMode && days.filter(day => !day.is_active).length > 0 && (

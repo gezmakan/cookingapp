@@ -67,14 +67,14 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title, meal }: V
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:!max-w-[960px] w-[90vw] h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] md:h-auto md:max-h-[90vh] overflow-y-auto overflow-x-hidden flex flex-col">
+      <DialogContent className="sm:!max-w-[1200px] lg:!max-w-[1400px] w-[90vw] h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] md:h-auto md:max-h-[90vh] overflow-y-auto overflow-x-hidden flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
         <div className={`flex flex-col ${meal && (meal.ingredients || meal.instructions) ? 'md:flex-row md:gap-6' : ''} flex-1 overflow-hidden`}>
           <div
-            className={`flex-shrink-0 ${platform === 'tiktok' ? 'w-full max-w-sm mx-auto' : 'w-full'} ${meal && (meal.ingredients || meal.instructions) ? 'md:basis-7/12 md:max-w-[540px]' : ''}`}
+            className={`flex-shrink-0 ${platform === 'tiktok' ? 'w-full max-w-sm mx-auto' : 'w-full'} ${meal && (meal.ingredients || meal.instructions) ? 'md:basis-1/2 lg:basis-[52%]' : ''}`}
             style={{ aspectRatio: platform === 'tiktok' ? '9/16' : '16/9' }}
           >
             <iframe
