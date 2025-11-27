@@ -682,10 +682,13 @@ export default function MealPlanPage() {
                         <div className="py-8 text-center">
                           <p className="text-gray-400 mb-3">No meals yet</p>
                           {isEditMode && (
-                            <Button variant="outline" size="sm" onClick={() => openMealSelector(day.id)}>
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add Meal
-                            </Button>
+                            <>
+                              <p className="hidden lg:block text-xs text-gray-500">Drag meals from the library →</p>
+                              <Button variant="outline" size="sm" onClick={() => openMealSelector(day.id)} className="lg:hidden">
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add Meal
+                              </Button>
+                            </>
                           )}
                         </div>
                       ) : (
@@ -714,7 +717,7 @@ export default function MealPlanPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              className="w-full mt-2"
+                              className="w-full mt-2 lg:hidden"
                               onClick={() => openMealSelector(day.id)}
                             >
                               <Plus className="h-3 w-3 mr-1" />
@@ -741,38 +744,38 @@ export default function MealPlanPage() {
                   </div>
 
                   {/* Meal Library Sidebar - Desktop Only */}
-                  <div className="hidden lg:block lg:w-80 xl:w-96">
-                    <div className="sticky top-4 bg-white border border-orange-100 rounded-3xl shadow-lg p-6 max-h-[calc(100vh-6rem)] flex flex-col">
-                      <h3 className="text-xl font-semibold text-gray-900 font-quicksand mb-4">Meal Library</h3>
+                  <div className="hidden lg:block lg:w-64 xl:w-72">
+                    <div className="sticky top-4 bg-white border border-orange-100 rounded-3xl shadow-lg p-4 max-h-[calc(100vh-6rem)] flex flex-col">
+                      <h3 className="text-lg font-semibold text-gray-900 font-quicksand mb-3">Meal Library</h3>
 
                       {/* Search */}
-                      <div className="relative mb-4">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <div className="relative mb-3">
+                        <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
                         <Input
-                          placeholder="Search meals..."
+                          placeholder="Search..."
                           value={mealSearch}
                           onChange={(e) => setMealSearch(e.target.value)}
-                          className="pl-9"
+                          className="pl-8 text-sm h-9"
                         />
                       </div>
 
                       {/* Meals List */}
-                      <div className="flex-1 overflow-y-auto -mx-2 px-2">
+                      <div className="flex-1 overflow-y-auto -mx-1 px-1 sidebar-scroll">
                         {isLoadingMeals ? (
-                          <div className="py-12 text-center">
-                            <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2 text-orange-600" />
-                            <p className="text-gray-500 text-sm">Loading meals...</p>
+                          <div className="py-8 text-center">
+                            <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-orange-600" />
+                            <p className="text-gray-500 text-sm">Loading...</p>
                           </div>
                         ) : filteredMeals.length === 0 ? (
-                          <div className="py-12 text-center text-gray-500 text-sm">
+                          <div className="py-8 text-center text-gray-500 text-sm">
                             {mealSearch ? 'No meals found' : 'No meals yet'}
                           </div>
                         ) : (
-                          <div className="space-y-2">
+                          <div className="space-y-1.5">
                             {filteredMeals.map((meal) => (
                               <div
                                 key={meal.id}
-                                className="p-3 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-colors cursor-grab active:cursor-grabbing"
+                                className="py-2.5 px-2 rounded-lg border border-gray-200 hover:border-orange-300 hover:bg-orange-50 transition-colors cursor-grab active:cursor-grabbing"
                                 draggable
                                 onDragStart={(e) => {
                                   e.dataTransfer.effectAllowed = 'copy'
@@ -780,9 +783,9 @@ export default function MealPlanPage() {
                                   e.dataTransfer.setData('mealName', meal.name)
                                 }}
                               >
-                                <p className="font-medium text-gray-900 text-sm">{meal.name}</p>
+                                <p className="font-medium text-gray-900 text-sm leading-snug">{meal.name}</p>
                                 {meal.cuisine_type && (
-                                  <p className="text-xs text-gray-500 mt-1">{meal.cuisine_type}</p>
+                                  <p className="text-xs text-gray-500 mt-0.5">{meal.cuisine_type}</p>
                                 )}
                               </div>
                             ))}
@@ -859,7 +862,8 @@ export default function MealPlanPage() {
                             {day.meals.length === 0 ? (
                               <div className="py-8 text-center">
                                 <p className="text-gray-400 mb-3">No meals yet</p>
-                                <Button variant="outline" size="sm" onClick={() => openMealSelector(day.id)}>
+                                <p className="hidden lg:block text-xs text-gray-500">Drag meals from the library →</p>
+                                <Button variant="outline" size="sm" onClick={() => openMealSelector(day.id)} className="lg:hidden">
                                   <Plus className="h-3 w-3 mr-1" />
                                   Add Meal
                                 </Button>
@@ -889,7 +893,7 @@ export default function MealPlanPage() {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="w-full mt-2"
+                                  className="w-full mt-2 lg:hidden"
                                   onClick={() => openMealSelector(day.id)}
                                 >
                                   <Plus className="h-3 w-3 mr-1" />
