@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useMealPlanStore } from '@/hooks/useMealPlanStore'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Loader2, Edit2, Trash2, Video, Search, Eye, EyeOff } from 'lucide-react'
+import { Plus, Loader2, Edit2, Trash2, Video, Search } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -255,16 +255,21 @@ export default function MealPlanPage() {
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-xl">{day.day_name}</CardTitle>
                     {isEditMode && (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
                           onClick={() => handleToggleActive(day.id, day.is_active)}
-                          className="text-gray-600 hover:text-gray-700"
-                          title="Hide day"
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                            day.is_active ? 'bg-green-600' : 'bg-gray-300'
+                          }`}
+                          title={day.is_active ? "Active (shown)" : "Inactive (hidden)"}
                         >
-                          <EyeOff className="h-4 w-4" />
-                        </Button>
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              day.is_active ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -355,16 +360,21 @@ export default function MealPlanPage() {
                       <CardHeader className="!px-4 !pt-3.5 !pb-3 border-b border-gray-200">
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-xl text-gray-600">{day.day_name}</CardTitle>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
                               onClick={() => handleToggleActive(day.id, day.is_active)}
-                              className="text-green-600 hover:text-green-700"
-                              title="Show day"
+                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                                day.is_active ? 'bg-green-600' : 'bg-gray-300'
+                              }`}
+                              title={day.is_active ? "Active (shown)" : "Inactive (hidden)"}
                             >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                              <span
+                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                  day.is_active ? 'translate-x-6' : 'translate-x-1'
+                                }`}
+                              />
+                            </button>
                             <Button
                               variant="ghost"
                               size="sm"
