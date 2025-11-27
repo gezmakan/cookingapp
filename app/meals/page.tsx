@@ -33,10 +33,16 @@ export default function MealsPage() {
   const [showAll, setShowAll] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc')
+  const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null)
   const router = useRouter()
   const supabase = createClient()
 
   const MEALS_PER_PAGE = 30
+
+  // Get unique cuisine types from meals
+  const uniqueCuisineTypes = Array.from(
+    new Set(meals.map(meal => meal.cuisine_type).filter(Boolean))
+  ).sort() as string[]
 
   // Fuzzy match function
   const fuzzyMatch = (text: string, search: string): number => {
@@ -72,6 +78,13 @@ export default function MealsPage() {
 
   // Filter and sort meals
   const filteredMeals = meals
+    .filter(meal => {
+      // Filter by cuisine type if selected
+      if (selectedCuisine && meal.cuisine_type !== selectedCuisine) {
+        return false
+      }
+      return true
+    })
     .map(meal => ({
       meal,
       score: Math.max(
@@ -134,7 +147,7 @@ export default function MealsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar />
+      <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
       <div className="max-w-5xl xl:max-w-6xl mx-auto px-4 flex-1 w-full md:p-8 pt-4">
         <div className="mb-4 md:mb-8">
           <div className="flex items-center justify-between gap-3 mt-2 md:mt-4">
@@ -142,7 +155,8 @@ export default function MealsPage() {
           </div>
         </div>
 
-        <div className="mb-4">
+        {/* Mobile search bar */}
+        <div className="mb-4 md:hidden">
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
@@ -154,14 +168,12 @@ export default function MealsPage() {
               />
             </div>
             {user ? (
-              <Button onClick={() => router.push('/meals/add')} size="sm" variant="outline" className="md:h-10 flex-shrink-0">
-                <Plus className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Add Meal</span>
-                <span className="md:hidden">Add</span>
+              <Button onClick={() => router.push('/meals/add')} size="sm" variant="outline" className="flex-shrink-0">
+                <Plus className="h-4 w-4 mr-2" /> Add
               </Button>
             ) : (
-              <Button onClick={() => router.push('/signup')} size="sm" className="md:h-10 flex-shrink-0 bg-orange-500 hover:bg-orange-600 text-white">
-                <Plus className="h-4 w-4 md:mr-2" /> <span className="hidden md:inline">Add More</span>
-                <span className="md:hidden">Add</span>
+              <Button onClick={() => router.push('/signup')} size="sm" className="flex-shrink-0 bg-orange-500 hover:bg-orange-600 text-white">
+                <Plus className="h-4 w-4 mr-2" /> Add
               </Button>
             )}
           </div>
@@ -176,17 +188,49 @@ export default function MealsPage() {
           </div>
         ) : (
           <>
-            <div className="bg-white md:rounded-lg border-y md:border -mx-4 md:mx-0 px-4 py-3 mb-4 flex items-center justify-between">
-              <button
-                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900"
-              >
-                <ArrowUpDown className="h-4 w-4" />
-                Sort {sortOrder === 'asc' ? 'A-Z' : 'Z-A'}
-              </button>
-              <span className="text-sm text-gray-600">
-                {filteredMeals.length} meal{filteredMeals.length !== 1 ? 's' : ''}
-              </span>
+            <div className="bg-white md:rounded-lg border-y md:border -mx-4 md:mx-0 px-4 py-3 mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                  className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900 flex-shrink-0"
+                  title={`Sort ${sortOrder === 'asc' ? 'A-Z' : 'Z-A'}`}
+                >
+                  <ArrowUpDown className="h-4 w-4" />
+                </button>
+
+                {/* Cuisine filter pills */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setSelectedCuisine(null)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                      selectedCuisine === null
+                        ? 'bg-orange-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    All
+                  </button>
+                  {uniqueCuisineTypes.map(cuisine => (
+                    <button
+                      key={cuisine}
+                      onClick={() => setSelectedCuisine(cuisine)}
+                      className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                        selectedCuisine === cuisine
+                          ? 'bg-orange-500 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                    >
+                      {cuisine}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {user && (
+                <Button onClick={() => router.push('/meals/add')} size="sm" variant="outline" className="hidden md:flex flex-shrink-0">
+                  <Plus className="h-4 w-4 mr-2" /> Add Meal
+                </Button>
+              )}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 -mx-4 md:mx-0">
@@ -217,8 +261,8 @@ export default function MealsPage() {
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors flex items-center justify-center">
-                            <div className="w-16 h-16 rounded-full bg-white/90 flex items-center justify-center">
-                              <Video className="h-8 w-8 text-orange-600" />
+                            <div className="px-6 py-4 rounded-lg bg-red-600/50 flex items-center justify-center shadow-lg group-hover:bg-red-600/70 transition-colors">
+                              <div className="w-0 h-0 border-l-[14px] border-l-white border-t-[10px] border-t-transparent border-b-[10px] border-b-transparent ml-1"></div>
                             </div>
                           </div>
                         </button>

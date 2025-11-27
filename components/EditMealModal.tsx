@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Globe, Loader2 } from 'lucide-react'
 import { toast } from 'sonner'
+import CuisineAutocomplete from '@/components/CuisineAutocomplete'
 
 type EditMealModalProps = {
   isOpen: boolean
@@ -152,11 +153,10 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
             {/* Cuisine Type */}
             <div className="md:flex md:items-center md:gap-4 space-y-2 md:space-y-0">
               <Label htmlFor="edit-cuisine" className="md:w-32 md:flex-shrink-0">Cuisine Type</Label>
-              <Input
+              <CuisineAutocomplete
                 id="edit-cuisine"
                 value={formData.cuisine_type}
-                onChange={(e) => setFormData({ ...formData, cuisine_type: e.target.value })}
-                className="flex-1"
+                onChange={(value) => setFormData({ ...formData, cuisine_type: value })}
               />
             </div>
 
@@ -225,7 +225,7 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
           </div>
         )}
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-3 sm:gap-3">
           <Button
             variant="destructive"
             onClick={handleDelete}
@@ -251,7 +251,7 @@ export default function EditMealModal({ isOpen, onClose, mealId, onSuccess }: Ed
                 Saving...
               </>
             ) : (
-              'Save Changes'
+              'Save'
             )}
           </Button>
         </DialogFooter>

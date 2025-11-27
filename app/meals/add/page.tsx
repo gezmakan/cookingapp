@@ -12,6 +12,7 @@ import { toast } from 'sonner'
 import { Toaster } from '@/components/ui/sonner'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import CuisineAutocomplete from '@/components/CuisineAutocomplete'
 
 export default function AddMealPage() {
   const [name, setName] = useState('')
@@ -106,12 +107,10 @@ export default function AddMealPage() {
             <Label htmlFor="cuisineType" className="text-sm font-medium md:w-32 md:flex-shrink-0">
               Cuisine Type
             </Label>
-            <Input
+            <CuisineAutocomplete
               id="cuisineType"
-              type="text"
               value={cuisineType}
-              onChange={(e) => setCuisineType(e.target.value)}
-              className="flex-1"
+              onChange={setCuisineType}
             />
           </div>
 
