@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
@@ -35,6 +35,7 @@ export default function MealsPage() {
   const [selectedCuisine, setSelectedCuisine] = useState<string | null>(null)
   const [showMineOnly, setShowMineOnly] = useState(false)
   const [filtersLoaded, setFiltersLoaded] = useState(false)
+  const manualFilterChangeRef = useRef(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -138,7 +139,7 @@ export default function MealsPage() {
           .eq('user_id', user.id)
           .single()
 
-        if (!error && data) {
+        if (!error && data && !manualFilterChangeRef.current) {
           setSelectedCuisine(data.meal_filter_cuisine || null)
           setShowMineOnly(!!data.meal_filter_show_mine)
           setSearchQuery(data.meal_filter_search || '')
@@ -160,7 +161,8 @@ export default function MealsPage() {
   }, [user, showMineOnly])
 
   useEffect(() => {
-    if (!user || !filtersLoaded) return
+    if (!user) return
+    if (!filtersLoaded && !manualFilterChangeRef.current) return
 
     const persistFilters = async () => {
       try {
@@ -173,6 +175,7 @@ export default function MealsPage() {
             meal_filter_search: searchQuery,
             updated_at: new Date().toISOString(),
           }, { onConflict: 'user_id' })
+        manualFilterChangeRef.current = false
       } catch (error) {
         console.error('Error saving meal filter preferences:', error)
       }
@@ -180,6 +183,21 @@ export default function MealsPage() {
 
     persistFilters()
   }, [selectedCuisine, showMineOnly, searchQuery, user, filtersLoaded])
+
+  const handleSelectCuisine = (cuisine: string | null) => {
+    manualFilterChangeRef.current = true
+    setSelectedCuisine(cuisine)
+  }
+
+  const handleToggleMineOnly = () => {
+    manualFilterChangeRef.current = true
+    setShowMineOnly((prev) => !prev)
+  }
+
+  const handleSearchChange = (value: string) => {
+    manualFilterChangeRef.current = true
+    setSearchQuery(value)
+  }
 
   const checkUser = async () => {
     const { data: { user } } = await supabase.auth.getUser()
@@ -213,7 +231,7 @@ export default function MealsPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <Navbar searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+      <Navbar searchQuery={searchQuery} onSearchChange={handleSearchChange} />
       <div className="max-w-5xl xl:max-w-6xl mx-auto px-4 flex-1 w-full md:p-8 pt-4">
         <div className="mb-5 md:mb-10">
           <div className="relative overflow-hidden rounded-3xl bg-[#1c120a] text-white px-6 py-8 md:px-10 md:py-12 shadow-[0px_30px_80px_rgba(0,0,0,0.25)]">
@@ -249,7 +267,7 @@ export default function MealsPage() {
               <Input
                 placeholder="Search meals..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={(e) => handleSearchChange(e.target.value)}
                 className="pl-10 w-full"
               />
             </div>
@@ -268,7 +286,7 @@ export default function MealsPage() {
             <div className="bg-white md:rounded-lg border-y md:border -mx-4 md:mx-0 px-4 py-3 mb-4 flex items-center justify-between gap-3 overflow-x-auto">
               <div className="flex items-center gap-2 min-w-0 flex-wrap">
                 <button
-                  onClick={() => setSelectedCuisine(null)}
+                  onClick={() => handleSelectCuisine(null)}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
                     selectedCuisine === null
                       ? 'bg-orange-500 text-white'
@@ -280,7 +298,7 @@ export default function MealsPage() {
                 {uniqueCuisineTypes.map(cuisine => (
                   <button
                     key={cuisine}
-                    onClick={() => setSelectedCuisine(cuisine)}
+                    onClick={() => handleSelectCuisine(cuisine)}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
                       selectedCuisine === cuisine
                         ? 'bg-orange-500 text-white'
@@ -292,7 +310,7 @@ export default function MealsPage() {
                 ))}
                 {user && (
                   <button
-                    onClick={() => setShowMineOnly((prev) => !prev)}
+                    onClick={handleToggleMineOnly}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap border ${
                       showMineOnly
                         ? 'bg-orange-500 text-white border-orange-500'
