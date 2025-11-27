@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useMealPlanStore } from '@/hooks/useMealPlanStore'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Plus, Loader2, Edit2, Trash2, Video, Search } from 'lucide-react'
+import { Plus, Loader2, Edit2, Trash2, Video, Search, GripVertical } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,96 @@ import type { Meal } from '@/types/meals'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
 import VideoModal from '@/components/VideoModal'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import type { DayMeal } from '@/types/meals'
+
+// Sortable Meal Row Component
+function SortableMealRow({
+  meal,
+  isEditMode,
+  onVideoClick,
+  onDelete,
+}: {
+  meal: DayMeal
+  isEditMode: boolean
+  onVideoClick: () => void
+  onDelete: () => void
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: meal.day_meal_id })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:border-orange-200 transition-colors"
+    >
+      {isEditMode && (
+        <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none">
+          <GripVertical className="h-4 w-4 text-gray-400" />
+        </div>
+      )}
+      <div
+        className={`flex-1 ${meal.video_url ? 'cursor-pointer' : ''}`}
+        onClick={() => {
+          if (meal.video_url) {
+            onVideoClick()
+          }
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <h4 className={`font-medium text-gray-900 ${meal.video_url ? 'hover:text-orange-600 transition-colors' : ''}`}>
+            {meal.name}
+          </h4>
+          {meal.video_url && (
+            <Video className="h-3.5 w-3.5 text-orange-600" />
+          )}
+        </div>
+        {meal.cuisine_type && (
+          <span className="text-xs text-gray-500">{meal.cuisine_type}</span>
+        )}
+      </div>
+      {isEditMode && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-red-600 hover:text-red-700"
+          onClick={onDelete}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      )}
+    </div>
+  )
+}
 
 export default function MealPlanPage() {
   const supabase = createClient()
@@ -39,6 +129,22 @@ export default function MealPlanPage() {
 
   // Video modal state
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; title: string; meal?: Meal } | null>(null)
+
+  // Day name editing state
+  const [editingDayId, setEditingDayId] = useState<string | null>(null)
+  const [editingDayName, setEditingDayName] = useState('')
+
+  // Drag & drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
 
   const handleAddDay = async () => {
     if (!dayName.trim()) return
@@ -102,6 +208,75 @@ export default function MealPlanPage() {
     } catch (error) {
       console.error('Error toggling day active state:', error)
       alert('Failed to toggle day')
+    }
+  }
+
+  const handleStartEditingDayName = (dayId: string, currentName: string) => {
+    setEditingDayId(dayId)
+    setEditingDayName(currentName)
+  }
+
+  const handleCommitDayName = async (dayId: string) => {
+    const trimmed = editingDayName.trim()
+    if (!trimmed) {
+      alert('Day name cannot be empty')
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('meal_plan_days')
+        .update({ day_name: trimmed })
+        .eq('id', dayId)
+
+      if (error) throw error
+
+      await refetch()
+      setEditingDayId(null)
+      setEditingDayName('')
+    } catch (error) {
+      console.error('Error updating day name:', error)
+      alert('Failed to update day name')
+    }
+  }
+
+  const handleCancelDayNameEdit = () => {
+    setEditingDayId(null)
+    setEditingDayName('')
+  }
+
+  const handleDragEnd = async (dayId: string, event: DragEndEvent) => {
+    const { active, over } = event
+
+    if (!over || active.id === over.id) {
+      return
+    }
+
+    const day = days?.find(d => d.id === dayId)
+    if (!day) return
+
+    const oldIndex = day.meals.findIndex(m => m.day_meal_id === active.id)
+    const newIndex = day.meals.findIndex(m => m.day_meal_id === over.id)
+
+    const newMeals = arrayMove(day.meals, oldIndex, newIndex)
+
+    try {
+      const updates = newMeals.map((meal, idx) => ({
+        id: meal.day_meal_id,
+        order_index: idx,
+      }))
+
+      for (const update of updates) {
+        await supabase
+          .from('meal_plan_day_meals')
+          .update({ order_index: update.order_index })
+          .eq('id', update.id)
+      }
+
+      await refetch()
+    } catch (error) {
+      console.error('Error reordering meals:', error)
+      alert('Failed to reorder meals')
     }
   }
 
@@ -253,7 +428,31 @@ export default function MealPlanPage() {
               <Card key={day.id} className="border-orange-100">
                 <CardHeader className="!px-4 !pt-3.5 !pb-3 border-b border-orange-50">
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-xl">{day.day_name}</CardTitle>
+                    {editingDayId === day.id ? (
+                      <Input
+                        value={editingDayName}
+                        onChange={(e) => setEditingDayName(e.target.value)}
+                        onBlur={() => handleCommitDayName(day.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleCommitDayName(day.id)
+                          }
+                          if (e.key === 'Escape') {
+                            handleCancelDayNameEdit()
+                          }
+                        }}
+                        className="text-xl font-semibold h-9 max-w-xs"
+                        autoFocus
+                      />
+                    ) : (
+                      <CardTitle
+                        className={`text-xl ${isEditMode ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}
+                        onClick={() => isEditMode && handleStartEditingDayName(day.id, day.day_name)}
+                        title={isEditMode ? 'Click to edit' : ''}
+                      >
+                        {day.day_name}
+                      </CardTitle>
+                    )}
                     {isEditMode && (
                       <div className="flex items-center gap-3">
                         <div className="flex items-center gap-2">
@@ -298,43 +497,26 @@ export default function MealPlanPage() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {day.meals.map((meal) => (
-                        <div
-                          key={meal.day_meal_id}
-                          className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:border-orange-200 transition-colors"
+                      <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={(event) => handleDragEnd(day.id, event)}
+                      >
+                        <SortableContext
+                          items={day.meals.map(m => m.day_meal_id)}
+                          strategy={verticalListSortingStrategy}
                         >
-                          <div
-                            className={`flex-1 ${meal.video_url ? 'cursor-pointer' : ''}`}
-                            onClick={() => {
-                              if (meal.video_url) {
-                                setSelectedVideo({ url: meal.video_url, title: meal.name, meal })
-                              }
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <h4 className={`font-medium text-gray-900 ${meal.video_url ? 'hover:text-orange-600 transition-colors' : ''}`}>
-                                {meal.name}
-                              </h4>
-                              {meal.video_url && (
-                                <Video className="h-3.5 w-3.5 text-orange-600" />
-                              )}
-                            </div>
-                            {meal.cuisine_type && (
-                              <span className="text-xs text-gray-500">{meal.cuisine_type}</span>
-                            )}
-                          </div>
-                          {isEditMode && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700"
-                              onClick={() => handleRemoveMealFromDay(meal.day_meal_id)}
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          )}
-                        </div>
-                      ))}
+                          {day.meals.map((meal) => (
+                            <SortableMealRow
+                              key={meal.day_meal_id}
+                              meal={meal}
+                              isEditMode={isEditMode}
+                              onVideoClick={() => setSelectedVideo({ url: meal.video_url!, title: meal.name, meal })}
+                              onDelete={() => handleRemoveMealFromDay(meal.day_meal_id)}
+                            />
+                          ))}
+                        </SortableContext>
+                      </DndContext>
                       {isEditMode && (
                         <Button
                           variant="outline"
@@ -362,7 +544,31 @@ export default function MealPlanPage() {
                     <Card key={day.id} className="border-gray-300 bg-gray-50">
                       <CardHeader className="!px-4 !pt-3.5 !pb-3 border-b border-gray-200">
                         <div className="flex items-center justify-between">
-                          <CardTitle className="text-xl text-gray-600">{day.day_name}</CardTitle>
+                          {editingDayId === day.id ? (
+                            <Input
+                              value={editingDayName}
+                              onChange={(e) => setEditingDayName(e.target.value)}
+                              onBlur={() => handleCommitDayName(day.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleCommitDayName(day.id)
+                                }
+                                if (e.key === 'Escape') {
+                                  handleCancelDayNameEdit()
+                                }
+                              }}
+                              className="text-xl font-semibold h-9 max-w-xs"
+                              autoFocus
+                            />
+                          ) : (
+                            <CardTitle
+                              className="text-xl text-gray-600 cursor-pointer hover:opacity-70 transition-opacity"
+                              onClick={() => handleStartEditingDayName(day.id, day.day_name)}
+                              title="Click to edit"
+                            >
+                              {day.day_name}
+                            </CardTitle>
+                          )}
                           <div className="flex items-center gap-3">
                             <div className="flex items-center gap-2">
                               <span className="text-sm text-gray-600">Active</span>
@@ -402,42 +608,27 @@ export default function MealPlanPage() {
                             </Button>
                           </div>
                         ) : (
-                          <div className="space-y-3">
-                            {day.meals.map((meal) => (
-                              <div
-                                key={meal.day_meal_id}
-                                className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-200 opacity-60"
+                          <div className="space-y-3 opacity-60">
+                            <DndContext
+                              sensors={sensors}
+                              collisionDetection={closestCenter}
+                              onDragEnd={(event) => handleDragEnd(day.id, event)}
+                            >
+                              <SortableContext
+                                items={day.meals.map(m => m.day_meal_id)}
+                                strategy={verticalListSortingStrategy}
                               >
-                                <div
-                                  className={`flex-1 ${meal.video_url ? 'cursor-pointer' : ''}`}
-                                  onClick={() => {
-                                    if (meal.video_url) {
-                                      setSelectedVideo({ url: meal.video_url, title: meal.name, meal })
-                                    }
-                                  }}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <h4 className={`font-medium text-gray-700 ${meal.video_url ? 'hover:text-orange-600 transition-colors' : ''}`}>
-                                      {meal.name}
-                                    </h4>
-                                    {meal.video_url && (
-                                      <Video className="h-3.5 w-3.5 text-orange-600" />
-                                    )}
-                                  </div>
-                                  {meal.cuisine_type && (
-                                    <span className="text-xs text-gray-500">{meal.cuisine_type}</span>
-                                  )}
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  className="text-red-600 hover:text-red-700"
-                                  onClick={() => handleRemoveMealFromDay(meal.day_meal_id)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                            ))}
+                                {day.meals.map((meal) => (
+                                  <SortableMealRow
+                                    key={meal.day_meal_id}
+                                    meal={meal}
+                                    isEditMode={true}
+                                    onVideoClick={() => setSelectedVideo({ url: meal.video_url!, title: meal.name, meal })}
+                                    onDelete={() => handleRemoveMealFromDay(meal.day_meal_id)}
+                                  />
+                                ))}
+                              </SortableContext>
+                            </DndContext>
                             <Button
                               variant="outline"
                               size="sm"
