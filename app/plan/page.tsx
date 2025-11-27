@@ -256,20 +256,23 @@ export default function MealPlanPage() {
                     <CardTitle className="text-xl">{day.day_name}</CardTitle>
                     {isEditMode && (
                       <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActive(day.id, day.is_active)}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
-                            day.is_active ? 'bg-green-600' : 'bg-gray-300'
-                          }`}
-                          title={day.is_active ? "Active (shown)" : "Inactive (hidden)"}
-                        >
-                          <span
-                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                              day.is_active ? 'translate-x-6' : 'translate-x-1'
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-gray-600">Active</span>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleActive(day.id, day.is_active)}
+                            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                              day.is_active ? 'bg-green-600' : 'bg-gray-300'
                             }`}
-                          />
-                        </button>
+                            title={day.is_active ? "Active (shown)" : "Inactive (hidden)"}
+                          >
+                            <span
+                              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                day.is_active ? 'translate-x-6' : 'translate-x-1'
+                              }`}
+                            />
+                          </button>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -361,20 +364,23 @@ export default function MealPlanPage() {
                         <div className="flex items-center justify-between">
                           <CardTitle className="text-xl text-gray-600">{day.day_name}</CardTitle>
                           <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => handleToggleActive(day.id, day.is_active)}
-                              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
-                                day.is_active ? 'bg-green-600' : 'bg-gray-300'
-                              }`}
-                              title={day.is_active ? "Active (shown)" : "Inactive (hidden)"}
-                            >
-                              <span
-                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                                  day.is_active ? 'translate-x-6' : 'translate-x-1'
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm text-gray-600">Active</span>
+                              <button
+                                type="button"
+                                onClick={() => handleToggleActive(day.id, day.is_active)}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+                                  day.is_active ? 'bg-green-600' : 'bg-gray-300'
                                 }`}
-                              />
-                            </button>
+                                title={day.is_active ? "Active (shown)" : "Inactive (hidden)"}
+                              >
+                                <span
+                                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                    day.is_active ? 'translate-x-6' : 'translate-x-1'
+                                  }`}
+                                />
+                              </button>
+                            </div>
                             <Button
                               variant="ghost"
                               size="sm"
