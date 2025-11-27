@@ -153,6 +153,8 @@ export default function MealPlanPage() {
   const nextFeaturedMeal = activeDays.find((day) => day.meals.length > 0)?.meals[0] || null
   const hasPlanContent = activeDays.length > 0
   const heroSubtitle = menuSubtitle || 'Plan your weekly meals'
+  const weekdayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
+  const currentWeekdayName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date()).toLowerCase()
 
   const handleSaveTitleSubtitle = async () => {
     try {
@@ -777,106 +779,92 @@ export default function MealPlanPage() {
                   <div className="absolute -left-10 bottom-0 w-72 h-72 bg-rose-200/30 blur-3xl" />
                   <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.2) 1px, transparent 0)' }} />
                 </div>
-                <div className="relative z-10 flex flex-col gap-8 lg:flex-row lg:items-end">
+                <div className="relative z-10 flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                   <div className="flex-1">
-                      <div className="flex items-center gap-3 mt-3">
-                        <h1 className="text-4xl md:text-5xl font-semibold">{menuTitle}</h1>
-                        <Sparkles className="h-6 w-6 text-orange-200" />
-                      </div>
-                    {heroSubtitle && <p className="text-lg text-orange-50/80 mt-4 max-w-2xl">{heroSubtitle}</p>}
-                    {nextFeaturedMeal && (
-                      <div className="mt-6 inline-flex items-center gap-3 rounded-full bg-white/10 px-5 py-2 text-sm backdrop-blur">
-                        <span className="uppercase tracking-[0.3em] text-orange-100/90">Next Course</span>
-                        <span className="font-semibold">{nextFeaturedMeal.name}</span>
-                      </div>
-                    )}
-                    <div className="flex flex-wrap gap-3 mt-8">
-                      <Button
-                        className="bg-white text-gray-900 hover:bg-white/90 shadow-lg"
-                        onClick={() => setIsEditMode(true)}
-                      >
-                        <Edit2 className="h-4 w-4" />
-                        Curate Menu
-                      </Button>
-                    </div>
+                  <div className="flex items-center gap-3 mt-1">
+                    <h1 className="text-4xl md:text-5xl font-semibold">{menuTitle}</h1>
+                    <Sparkles className="h-6 w-6 text-orange-200" />
                   </div>
-                  <div className="w-full lg:max-w-sm">
-                    <div className="rounded-2xl border border-white/30 bg-white/10 p-6 backdrop-blur">
-                      <p className="text-xs uppercase tracking-[0.3em] text-orange-50/70">Signature Spotlight</p>
-                      <h3 className="text-2xl font-semibold mt-2">{signatureCuisine || 'Seasonal Inspiration'}</h3>
-                      <p className="text-orange-50/80 mt-3">
-                        {signatureCuisine
-                          ? `A celebration of ${signatureCuisine} flavors curated across your tastings.`
-                          : 'Begin crafting a house signature by layering cuisines across your week.'}
-                      </p>
-                      <div className="mt-6 flex items-center gap-3 text-orange-100/90">
-                        <Crown className="h-10 w-10" />
-                        <div>
-                          <p className="text-sm uppercase tracking-[0.2em] text-orange-100/70">Chef&apos;s Whisper</p>
-                          <p className="font-medium">
-                            {nextFeaturedMeal
-                              ? `Prepare mise en place for ${nextFeaturedMeal.name}.`
-                              : 'Select a hero dish to anchor this week.'}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
+                  {heroSubtitle && <p className="text-lg text-orange-50/80 mt-2 max-w-2xl">{heroSubtitle}</p>}
                   </div>
                 </div>
               </div>
             )}
             {hasPlanContent ? (
               <>
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
-                  {activeDays.map((day) => (
-                    <div
-                      key={day.id}
-                      className="group relative overflow-hidden rounded-3xl bg-white shadow-[0px_25px_70px_rgba(0,0,0,0.08)] border border-white/70"
-                    >
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {activeDays.map((day) => {
+                    const normalizedDayName = day.day_name.trim().toLowerCase()
+                    const isWeekdayName = weekdayNames.includes(normalizedDayName)
+                    const isToday = isWeekdayName && normalizedDayName === currentWeekdayName
+
+                    return (
+                      <div
+                        key={day.id}
+                        className={`group relative overflow-hidden rounded-3xl shadow-[0px_25px_70px_rgba(0,0,0,0.08)] border transition-colors ${
+                          isToday ? 'bg-white border-amber-200' : 'bg-white border-white/70'
+                        }`}
+                      >
                         <div className="relative p-6 space-y-5">
                           <div className="flex items-start justify-between">
                             <div>
                               <h3 className="text-2xl font-semibold text-gray-900">{day.day_name}</h3>
                             </div>
+                            {isToday && (
+                              <span className="rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-semibold">
+                                Today
+                              </span>
+                            )}
                           </div>
-                        <div className="space-y-3">
-                          {day.meals.length === 0 ? (
-                            <div className="rounded-2xl border border-dashed border-gray-200 p-6 text-center text-gray-400">
-                              Awaiting chef&apos;s selection
-                            </div>
-                          ) : (
-                            day.meals.map((meal) => (
-                              <div
-                                key={meal.day_meal_id}
-                                className={`rounded-2xl border border-transparent bg-gray-50/90 px-4 py-3 transition-all ${meal.video_url ? 'cursor-pointer hover:border-orange-200 hover:bg-white' : ''}`}
-                                onClick={() => {
-                                  if (meal.video_url) {
-                                    setSelectedVideo({ url: meal.video_url!, title: meal.name, meal })
-                                  }
-                                }}
-                              >
-                                <div className="flex items-center justify-between gap-4">
-                                  <div className="min-w-0">
-                                    <p className="font-medium text-gray-900 truncate">{meal.name}</p>
-                                    {meal.cuisine_type && (
-                                      <p className="text-xs uppercase tracking-[0.2em] text-gray-400 mt-1">
-                                        {meal.cuisine_type}
-                                      </p>
+                          <div className="space-y-3">
+                            {day.meals.length === 0 ? (
+                              <div className="rounded-2xl border border-dashed border-gray-200 p-6 text-center text-gray-400">
+                                Awaiting chef&apos;s selection
+                              </div>
+                            ) : (
+                              day.meals.map((meal) => (
+                                <div
+                                  key={meal.day_meal_id}
+                                  className={`rounded-2xl border border-transparent bg-gray-50/90 px-4 py-3 transition-all ${
+                                    meal.video_url ? 'cursor-pointer hover:border-orange-200 hover:bg-white' : ''
+                                  }`}
+                                  onClick={() => {
+                                    if (meal.video_url) {
+                                      setSelectedVideo({ url: meal.video_url!, title: meal.name, meal })
+                                    }
+                                  }}
+                                >
+                                  <div className="flex items-center justify-between gap-4">
+                                    <div className="min-w-0">
+                                      <p className="font-medium text-gray-900 truncate">{meal.name}</p>
+                                      {meal.cuisine_type && (
+                                        <p className="text-xs uppercase tracking-[0.2em] text-gray-400 mt-1">
+                                          {meal.cuisine_type}
+                                        </p>
+                                      )}
+                                    </div>
+                                    {!meal.video_url && (
+                                      <span className="text-xs text-gray-400">No video</span>
                                     )}
                                   </div>
-                                  {!meal.video_url && (
-                                    <span className="text-xs text-gray-400">No video</span>
-                                  )}
                                 </div>
-                              </div>
-                            ))
-                          )}
+                              ))
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
-
+                <div className="flex justify-center mt-12">
+                  <Button
+                    className="bg-gray-900 text-white hover:bg-gray-800 shadow-lg"
+                    onClick={() => setIsEditMode(true)}
+                  >
+                    <Edit2 className="h-4 w-4" />
+                    Curate Menu
+                  </Button>
+                </div>
               </>
             ) : (
               <div className="rounded-3xl border border-dashed border-orange-200 bg-white/80 p-10 text-center shadow-[0px_20px_60px_rgba(0,0,0,0.05)]">
