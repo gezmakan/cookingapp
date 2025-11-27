@@ -36,10 +36,12 @@ type IngredientEntry = {
 
 const splitIngredients = (text?: string | null) => {
   if (!text) return []
+  // First split by newlines, then split each line by commas
   return text
     .replace(/\r/g, '')
     .split('\n')
-    .map((line) => line.trim())
+    .flatMap((line) => line.split(','))
+    .map((item) => item.trim())
     .filter(Boolean)
 }
 
