@@ -28,7 +28,7 @@ export default function LineItemsInput({
   value,
   onChange,
   placeholder = 'e.g., 2 cups flour',
-  description = 'One item per line. Press Enter to add another.',
+  description = 'One item per line. Press Enter to add another, or paste comma-separated items.',
   className,
 }: LineItemsInputProps) {
   const [items, setItems] = useState<string[]>(() => parseValue(value))
@@ -75,6 +75,30 @@ export default function LineItemsInput({
     updateItems(next, Math.max(0, index - 1))
   }
 
+  const handlePaste = (index: number, e: React.ClipboardEvent<HTMLInputElement>) => {
+    const pastedText = e.clipboardData.getData('text')
+
+    // Check if the pasted text contains commas
+    if (pastedText.includes(',')) {
+      e.preventDefault()
+
+      // Split by comma and clean up each item
+      const pastedItems = pastedText
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean)
+
+      if (pastedItems.length > 0) {
+        const next = [...items]
+        // Replace current line with first pasted item
+        next[index] = pastedItems[0]
+        // Insert remaining items after current line
+        next.splice(index + 1, 0, ...pastedItems.slice(1))
+        updateItems(next, index + pastedItems.length - 1)
+      }
+    }
+  }
+
   return (
     <div className={cn('space-y-2', className)}>
       {label && (
@@ -93,6 +117,7 @@ export default function LineItemsInput({
               value={line}
               placeholder={index === 0 ? placeholder : 'Another ingredient'}
               onChange={(e) => handleLineChange(index, e.target.value)}
+              onPaste={(e) => handlePaste(index, e)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   e.preventDefault()
