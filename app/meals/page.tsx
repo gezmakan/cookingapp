@@ -20,6 +20,7 @@ type Meal = {
   instructions: string | null
   video_url: string | null
   cuisine_type: string | null
+  is_private: boolean
   created_at: string
 }
 
