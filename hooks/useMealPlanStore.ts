@@ -159,13 +159,8 @@ export function useMealPlanStore(supabase: SupabaseClient) {
     isMountedRef.current = true
     fetchPlan(true)
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
-      fetchPlan(true)
-    })
-
     return () => {
       isMountedRef.current = false
-      subscription.unsubscribe()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

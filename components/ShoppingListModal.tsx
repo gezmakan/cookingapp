@@ -110,33 +110,32 @@ export default function ShoppingListModal({
               </div>
             </div>
 
-          <div className="flex-1 overflow-y-auto shopping-list-scroll px-4 sm:px-6 py-4 space-y-4">
+          <div className="flex-1 overflow-y-auto shopping-list-scroll px-4 sm:px-6 py-4">
             {ingredients.length === 0 ? (
               <div className="py-8 text-center text-gray-500">
                 Add meals to your plan to generate a shopping list.
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {ingredients.map((ingredient) => {
                   const checked = statusMap[ingredient.key] ?? false
                   return (
                     <label
                       key={ingredient.key}
-                      className="flex items-start gap-3 rounded-xl border border-gray-200 p-3 hover:border-orange-300 transition-colors"
+                      className="flex items-center gap-3 py-2 hover:bg-gray-50 transition-colors cursor-pointer"
                     >
                       <Checkbox
                         checked={checked}
                         onCheckedChange={(val) => onToggleIngredient(ingredient.label, Boolean(val))}
                         className="shrink-0"
                       />
-                      <div className="flex-1 min-w-0 break-words">
-                        <p className={`font-medium break-words ${checked ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-                          {ingredient.label}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1 break-words">
-                          {ingredient.sources.join(' • ')}
-                        </p>
-                      </div>
+                      <span className={`flex-1 break-words ${checked ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                        {ingredient.label}
+                      </span>
+                      <span className="text-xs text-gray-400 shrink-0">
+                        {ingredient.sources.length > 0 && ingredient.sources[0].split(' — ')[1]}
+                        {ingredient.sources.length > 1 && ` +${ingredient.sources.length - 1}`}
+                      </span>
                     </label>
                   )
                 })}
