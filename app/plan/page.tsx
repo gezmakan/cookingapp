@@ -17,6 +17,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { Meal } from '@/types/meals'
+import Navbar from '@/components/Navbar'
+import Footer from '@/components/Footer'
 
 export default function MealPlanPage() {
   const supabase = createClient()
@@ -184,8 +186,9 @@ export default function MealPlanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex flex-col">
+      <Navbar />
+      <div className="container mx-auto px-4 py-8 max-w-7xl flex-1">
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -428,6 +431,8 @@ export default function MealPlanPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Footer />
     </div>
   )
 }
