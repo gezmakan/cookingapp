@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label'
 import type { Meal } from '@/types/meals'
 import Navbar from '@/components/Navbar'
 import Footer from '@/components/Footer'
+import VideoModal from '@/components/VideoModal'
 
 export default function MealPlanPage() {
   const supabase = createClient()
@@ -34,6 +35,9 @@ export default function MealPlanPage() {
   const [availableMeals, setAvailableMeals] = useState<Meal[]>([])
   const [mealSearch, setMealSearch] = useState('')
   const [isLoadingMeals, setIsLoadingMeals] = useState(false)
+
+  // Video modal state
+  const [selectedVideo, setSelectedVideo] = useState<{ url: string; title: string; meal?: Meal } | null>(null)
 
   const handleAddDay = async () => {
     if (!dayName.trim()) return
@@ -247,9 +251,18 @@ export default function MealPlanPage() {
                           key={meal.day_meal_id}
                           className="flex items-center gap-3 p-3 bg-white rounded-lg border border-gray-100 hover:border-orange-200 transition-colors"
                         >
-                          <div className="flex-1">
+                          <div
+                            className={`flex-1 ${meal.video_url ? 'cursor-pointer' : ''}`}
+                            onClick={() => {
+                              if (meal.video_url) {
+                                setSelectedVideo({ url: meal.video_url, title: meal.name, meal })
+                              }
+                            }}
+                          >
                             <div className="flex items-center gap-2">
-                              <h4 className="font-medium text-gray-900">{meal.name}</h4>
+                              <h4 className={`font-medium text-gray-900 ${meal.video_url ? 'hover:text-orange-600 transition-colors' : ''}`}>
+                                {meal.name}
+                              </h4>
                               {meal.video_url && (
                                 <Video className="h-3.5 w-3.5 text-orange-600" />
                               )}
@@ -431,6 +444,16 @@ export default function MealPlanPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedVideo && (
+        <VideoModal
+          isOpen={!!selectedVideo}
+          onClose={() => setSelectedVideo(null)}
+          videoUrl={selectedVideo.url}
+          title={selectedVideo.title}
+          meal={selectedVideo.meal}
+        />
+      )}
 
       <Footer />
     </div>
