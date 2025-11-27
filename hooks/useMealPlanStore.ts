@@ -1,187 +1,141 @@
 'use client'
 
-import { useSyncExternalStore, useEffect } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import type { MealPlanDay } from '@/types/meals'
+import type { MealPlanDay, Meal } from '@/types/meals'
 
-type MealPlanStore = {
-  days: MealPlanDay[] | null
+type DayMealRecord = {
+  id: string
+  order_index: number
+  meal_id: string
+  meal_plan_day_id: string
+}
+
+type MealPlanState = {
+  days: MealPlanDay[]
   isLoading: boolean
   error: string | null
 }
 
-const store: MealPlanStore = {
-  days: null,
-  isLoading: true,
-  error: null,
-}
+export function useMealPlanStore(supabase: SupabaseClient) {
+  const [state, setState] = useState<MealPlanState>({
+    days: [],
+    isLoading: true,
+    error: null,
+  })
+  const isMountedRef = useRef(true)
 
-let listeners: Array<() => void> = []
-let pendingFetch: Promise<void> | null = null
-let fetchInitialized = false
-let cachedSnapshot = { ...store }
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
-const notify = () => {
-  // Create new snapshot when notifying
-  cachedSnapshot = { ...store }
-  listeners.forEach((listener) => listener())
-}
+  const fetchMealPlanData = useCallback(async (): Promise<MealPlanDay[]> => {
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
 
-const subscribe = (listener: () => void) => {
-  listeners.push(listener)
-  return () => {
-    listeners = listeners.filter((l) => l !== listener)
-  }
-}
+    const userId = session?.user?.id
+    if (!userId) {
+      return []
+    }
 
-const getSnapshot = () => cachedSnapshot
+    const { data: days, error: daysError } = await supabase
+      .from('meal_plan_days')
+      .select('*')
+      .eq('user_id', userId)
+      .order('order_index', { ascending: true })
 
-// Cached server snapshot to avoid infinite loop
-const serverSnapshot: MealPlanStore = {
-  days: null,
-  isLoading: true,
-  error: null,
-}
+    if (daysError) throw daysError
 
-const getServerSnapshot = () => serverSnapshot
+    const dayIds = (days ?? []).map((day) => day.id)
+    let dayMeals: DayMealRecord[] = []
 
-let currentUserId: string | null = null
-let authListenerInitialized = false
-
-const clearStore = () => {
-  store.days = null
-  store.isLoading = true
-  store.error = null
-  pendingFetch = null
-  notify()
-}
-
-async function fetchMealPlan(supabase: SupabaseClient): Promise<void> {
-  if (pendingFetch) {
-    return pendingFetch
-  }
-
-  pendingFetch = (async () => {
-    try {
-      store.isLoading = true
-      store.error = null
-      notify()
-
-      const { data: { user } } = await supabase.auth.getUser()
-
-      if (!user) {
-        store.days = null
-        store.isLoading = false
-        notify()
-        return
-      }
-
-      // Fetch all days with their meals
-      const { data: days, error: daysError } = await supabase
-        .from('meal_plan_days')
-        .select('*')
-        .eq('user_id', user.id)
+    if (dayIds.length > 0) {
+      const { data: dayMealsData, error: dayMealsError } = await supabase
+        .from('meal_plan_day_meals')
+        .select('id, order_index, meal_id, meal_plan_day_id')
+        .in('meal_plan_day_id', dayIds)
         .order('order_index', { ascending: true })
 
-      if (daysError) throw daysError
+      if (dayMealsError) throw dayMealsError
+      dayMeals = dayMealsData ?? []
+    }
 
-      // Fetch meals for each day
-      const daysWithMeals: MealPlanDay[] = await Promise.all(
-        (days || []).map(async (day) => {
-          const { data: dayMeals, error: mealsError } = await supabase
-            .from('meal_plan_day_meals')
-            .select('id, order_index, meal_id')
-            .eq('meal_plan_day_id', day.id)
-            .order('order_index', { ascending: true })
+    const mealIds = Array.from(new Set(dayMeals.map((dm) => dm.meal_id)))
+    const mealsMap = new Map<string, Meal>()
 
-          if (mealsError) throw mealsError
+    if (mealIds.length > 0) {
+      const { data: mealsData, error: mealsError } = await supabase
+        .from('meals')
+        .select('*')
+        .in('id', mealIds)
 
-          // Fetch the actual meal data for each meal_id
-          const mealsWithData = await Promise.all(
-            (dayMeals || []).map(async (dm) => {
-              const { data: meal, error: mealError } = await supabase
-                .from('meals')
-                .select('*')
-                .eq('id', dm.meal_id)
-                .single()
+      if (mealsError) throw mealsError
+      mealsData?.forEach((meal) => mealsMap.set(meal.id, meal))
+    }
 
-              if (mealError) {
-                console.error('Error fetching meal:', mealError)
-                return null
-              }
-
-              return {
-                ...meal,
-                day_meal_id: dm.id,
-                order_index: dm.order_index,
-              }
-            })
-          )
-
-          const meals = mealsWithData.filter((m): m is NonNullable<typeof m> => m !== null)
-
+    return (days || []).map((day) => {
+      const meals = dayMeals
+        .filter((dm) => dm.meal_plan_day_id === day.id)
+        .map((dm) => {
+          const meal = mealsMap.get(dm.meal_id)
+          if (!meal) return null
           return {
-            ...day,
-            meals,
+            ...meal,
+            day_meal_id: dm.id,
+            order_index: dm.order_index,
           }
         })
-      )
+        .filter((m): m is NonNullable<typeof m> => m !== null)
 
-      store.days = daysWithMeals
-      store.isLoading = false
-      notify()
-    } catch (error) {
-      console.error('Error fetching meal plan:', error)
-      store.error = error instanceof Error ? error.message : 'Failed to load meal plan'
-      store.isLoading = false
-      notify()
-    } finally {
-      pendingFetch = null
-    }
-  })()
-
-  return pendingFetch
-}
-
-export function useMealPlanStore(supabase: SupabaseClient) {
-  // Initialize auth listener once
-  if (!authListenerInitialized) {
-    authListenerInitialized = true
-
-    supabase.auth.onAuthStateChange(async (_event, session) => {
-      const newUserId = session?.user?.id ?? null
-
-      if (newUserId !== currentUserId) {
-        currentUserId = newUserId
-
-        if (newUserId) {
-          clearStore()
-          fetchInitialized = false
-          await fetchMealPlan(supabase)
-        } else {
-          clearStore()
-          store.isLoading = false
-          notify()
-        }
+      return {
+        ...day,
+        meals,
       }
     })
-  }
-
-  const state = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot
-  )
-
-  // Initialize fetch on first mount using useEffect
-  useEffect(() => {
-    if (!fetchInitialized) {
-      fetchInitialized = true
-      fetchMealPlan(supabase)
-    }
   }, [supabase])
 
-  const refetch = () => fetchMealPlan(supabase)
+  const loadPlan = useCallback(async () => {
+    setState((prev) => ({ ...prev, isLoading: true, error: null }))
+
+    try {
+      const daysWithMeals = await fetchMealPlanData()
+      if (!isMountedRef.current) return
+
+      setState({
+        days: daysWithMeals,
+        isLoading: false,
+        error: null,
+      })
+    } catch (error) {
+      console.error('Error fetching meal plan:', error)
+      if (!isMountedRef.current) return
+
+      setState({
+        days: [],
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Failed to load meal plan',
+      })
+    }
+  }, [fetchMealPlanData])
+
+  useEffect(() => {
+    loadPlan()
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      loadPlan()
+    })
+
+    return () => {
+      authListener.subscription.unsubscribe()
+    }
+  }, [loadPlan, supabase])
+
+  const refetch = useCallback(() => {
+    if (isMountedRef.current) {
+      loadPlan()
+    }
+  }, [loadPlan])
 
   return {
     ...state,
