@@ -120,3 +120,21 @@
     @apply bg-background text-foreground;
   }
 }
+
+@media print {
+  nav,
+  footer,
+  .print-hidden,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body {
+    background: #fff !important;
+  }
+
+  .print-area {
+    background: #fff !important;
+    box-shadow: none !important;
+  }
+}

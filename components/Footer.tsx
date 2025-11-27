@@ -97,6 +97,13 @@ export default function Footer() {
           {user && (
             <p className="text-gray-500">Logged in as <span className="font-medium text-gray-700">{user.email}</span></p>
           )}
+          <button
+            type="button"
+            className="text-orange-600 hover:underline font-medium print:hidden"
+            onClick={() => window.print()}
+          >
+            Export as PDF
+          </button>
           <p>© Yummii</p>
         </div>
       </div>

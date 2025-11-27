@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "CookMe - Meal Planner",
+  title: "Yummii - Meal Planner",
   description: "Plan your weekly meals and organize your favorite recipes",
 };
 

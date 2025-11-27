@@ -156,6 +156,7 @@ export default function MealPlanPage() {
   const weekdayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday']
   const currentWeekdayName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date()).toLowerCase()
   const selectedDay = selectedDayId ? days?.find((day) => day.id === selectedDayId) : null
+  const handleExportPlan = () => window.print()
 
   const handleSaveTitleSubtitle = async () => {
     try {
@@ -496,9 +497,9 @@ export default function MealPlanPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50 flex flex-col print:bg-white">
       <Navbar />
-      <div className="container mx-auto px-4 py-8 max-w-7xl flex-1">
+      <div className="container mx-auto px-4 py-8 max-w-7xl flex-1 space-y-6 print-area">
         {isEditMode ? (
           <>
             <div className="flex items-center justify-between mb-8">
@@ -775,8 +776,8 @@ export default function MealPlanPage() {
                 {titleEditor}
               </div>
             ) : (
-              <div className="relative overflow-hidden rounded-3xl bg-[#1c120a] text-white px-5 py-5 md:px-9 md:py-8 mb-10 shadow-[0px_30px_80px_rgba(0,0,0,0.25)]">
-                <div className="absolute inset-0">
+              <div className="relative overflow-hidden rounded-3xl bg-[#1c120a] text-white px-5 py-5 md:px-9 md:py-8 mb-10 shadow-[0px_30px_80px_rgba(0,0,0,0.25)] print:bg-white print:text-black print:shadow-none print:mb-6">
+                <div className="absolute inset-0 print-hidden">
                   <div className="absolute inset-0 bg-gradient-to-r from-orange-900/80 via-orange-700/70 to-rose-500/70" />
                   <div className="absolute -right-10 top-0 w-72 h-72 bg-orange-200/40 blur-3xl" />
                   <div className="absolute -left-10 bottom-0 w-72 h-72 bg-rose-200/30 blur-3xl" />
@@ -870,7 +871,7 @@ export default function MealPlanPage() {
                     )
                   })}
                 </div>
-                <div className="flex justify-center mt-12">
+                <div className="flex justify-center mt-12 print:hidden">
                   <Button
                     className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
                     onClick={() => setIsEditMode(true)}

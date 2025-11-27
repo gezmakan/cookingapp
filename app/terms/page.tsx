@@ -20,16 +20,62 @@ export default function TermsPage() {
           <h1 className="text-3xl font-bold mb-6">Terms of Service</h1>
 
           <div className="prose max-w-none">
-            <p className="text-gray-600 mb-4">
-              Last updated: {new Date().toLocaleDateString()}
-            </p>
+            <p className="text-gray-600 mb-4">Last updated: {new Date().toLocaleDateString()}</p>
 
             <h2 className="text-xl font-semibold mt-6 mb-3">1. Acceptance of Terms</h2>
             <p className="mb-4">
-              By accessing and using this gym tracker application, you accept and agree to be bound by the terms and provision of this agreement.
+              By accessing and using Yummii (“the App”), you agree to abide by these Terms of Service and any applicable laws. If you do not agree, please discontinue using the App.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">2. Health and Fitness Disclaimer</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">2. Service Overview</h2>
+            <p className="mb-4">
+              Yummii helps you plan meals, store recipes, and organize weekly menus. We provide tools for personal use only; you remain responsible for your dietary decisions and outcomes.
+            </p>
+
+            <h2 className="text-xl font-semibold mt-6 mb-3">3. Nutrition & Allergy Disclaimer</h2>
+            <p className="mb-4">
+              Yummii does not provide nutritional, medical, or allergen advice. Always verify ingredients and consult a qualified professional if you have dietary restrictions or health conditions.
+            </p>
+
+            <h2 className="text-xl font-semibold mt-6 mb-3">4. Content Ownership</h2>
+            <p className="mb-4">
+              You own the recipes you add to Yummii. By uploading content, you grant us a limited license to display it within the App. You also affirm that you have rights to the content you upload.
+            </p>
+
+            <h2 className="text-xl font-semibold mt-6 mb-3">5. Third-Party Links & Embeds</h2>
+            <p className="mb-4">
+              Yummii may include links to platforms like YouTube. We are not affiliated with nor responsible for third-party content or policies. Use external links at your own risk.
+            </p>
+
+            <h2 className="text-xl font-semibold mt-6 mb-3">6. Account Responsibilities</h2>
+            <p className="mb-4">
+              Keep your Yummii account credentials secure. You are responsible for all activity under your account. Notify us immediately of unauthorized use.
+            </p>
+
+            <h2 className="text-xl font-semibold mt-6 mb-3">7. Privacy</h2>
+            <p className="mb-4">
+              Your use of Yummii is subject to our Privacy Policy, which explains how we collect, use, and protect your information.
+            </p>
+
+            <h2 className="text-xl font-semibold mt-6 mb-3">8. Acceptable Use</h2>
+            <p className="mb-4">
+              Do not use Yummii for unlawful purposes, spam, or offensive content. We may suspend accounts that violate these terms or harm other users.
+            </p>
+
+            <h2 className="text-xl font-semibold mt-6 mb-3">9. Limitation of Liability</h2>
+            <p className="mb-4">
+              Yummii is provided “as is.” We are not liable for damages resulting from use of the App, including data loss or missed nutrition goals.
+            </p>
+
+            <h2 className="text-xl font-semibold mt-6 mb-3">10. Termination</h2>
+            <p className="mb-4">
+              We may suspend or terminate access if you violate these terms or abuse the service. You may delete your account at any time.
+            </p>
+
+            <h2 className="text-xl font-semibold mt-6 mb-3">11. Changes to Terms</h2>
+            <p className="mb-4">
+              We may update these terms periodically. Continued use of Yummii after updates constitutes acceptance of the revised terms.
+            </p>
             <p className="mb-4">
               <strong>IMPORTANT:</strong> This application is designed to help you track your workouts and fitness progress. However, you acknowledge and agree that:
             </p>

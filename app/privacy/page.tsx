@@ -17,61 +17,55 @@ export default function PrivacyPage() {
         </Button>
 
         <div className="bg-white rounded-lg border p-8">
-          <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
+          <h1 className="text-3xl font-bold mb-6">Yummii Privacy Policy</h1>
 
           <div className="prose max-w-none">
-            <p className="text-gray-600 mb-4">
-              Last updated: {new Date().toLocaleDateString()}
-            </p>
+            <p className="text-gray-600 mb-4">Last updated: {new Date().toLocaleDateString()}</p>
 
             <h2 className="text-xl font-semibold mt-6 mb-3">1. Information We Collect</h2>
             <p className="mb-4">
-              We collect information that you <strong>voluntarily provide</strong> when creating an account and using this application, including:
+              When you use Yummii, we collect the information you choose to share:
             </p>
             <ul className="list-disc pl-6 mb-4">
-              <li className="mb-2">Your email address (for account creation and authentication)</li>
-              <li className="mb-2">Workout data you voluntarily enter into the application (exercises, sets, reps, weights, dates)</li>
-              <li className="mb-2">Workout plans you create or modify</li>
+              <li className="mb-2">Email address for account creation, login, and support.</li>
+              <li className="mb-2">Recipes, meal plans, and preferences you enter or upload.</li>
+              <li className="mb-2">Basic usage analytics to keep the app running smoothly (e.g., error logs).</li>
             </ul>
-            <p className="mb-4">
-              All data is provided by you voluntarily through your use of the application.
-            </p>
 
             <h2 className="text-xl font-semibold mt-6 mb-3">2. How We Use Your Information</h2>
-            <p className="mb-4">
-              Your information is used <strong>solely</strong> for the following non-commercial purposes:
-            </p>
+            <p className="mb-4">We only use your data to operate Yummii:</p>
             <ul className="list-disc pl-6 mb-4">
-              <li className="mb-2">To provide and maintain your personal gym tracking service</li>
-              <li className="mb-2">To authenticate your account and keep you logged in</li>
-              <li className="mb-2">To enable you to access, view, and manage your workout data</li>
-              <li className="mb-2">To allow account recovery through your email address</li>
+              <li className="mb-2">Authenticate your account and keep you signed in.</li>
+              <li className="mb-2">Sync recipes and plans across your devices.</li>
+              <li className="mb-2">Improve app stability and fix bugs.</li>
             </ul>
             <p className="mb-4">
-              <strong>We do NOT use your data for any commercial purposes.</strong> We do not sell, rent, or monetize your personal information or workout data in any way.
+              We do not sell or rent your personal information or meal data.
             </p>
 
             <h2 className="text-xl font-semibold mt-6 mb-3">3. Data Storage</h2>
             <p className="mb-4">
-              Your workout data is stored securely using Supabase, a third-party database service. We implement appropriate security measures to protect your personal information. Your data is associated with your account and only accessible to you when logged in.
+              Your data is securely stored with Supabase (PostgreSQL). Access is restricted to your account, and we implement standard encryption and access controls.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">4. Data Sharing and Commercial Use</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">4. Third-Party Services</h2>
             <p className="mb-4">
-              <strong>We do not sell, trade, rent, or otherwise transfer your personal information or workout data to third parties for any commercial purpose.</strong> Your workout data is private to your account and is not shared with anyone.
-            </p>
-            <p className="mb-4">
-              The only exception is our use of Supabase for secure data storage, which is necessary to provide the service. Supabase has its own privacy policy governing how they handle data.
+              We rely on Supabase for database, authentication, and hosting. Their privacy policies apply to the infrastructure layer, but they do not use your data for their own purposes.
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">5. Your Rights</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">5. Your Choices & Rights</h2>
             <p className="mb-4">
-              You have the right to access, update, or delete your personal information at any time through your account settings.
+              You can view, edit, or delete your recipes and meal plans inside Yummii. If you’d like your account deleted entirely, contact support or use the account deletion option (where available).
             </p>
 
-            <h2 className="text-xl font-semibold mt-6 mb-3">6. Cookies</h2>
+            <h2 className="text-xl font-semibold mt-6 mb-3">6. Cookies & Sessions</h2>
             <p className="mb-4">
-              We use cookies for authentication purposes to keep you logged in to your account.
+              Yummii uses cookies/session storage strictly to keep you logged in and to protect your account. We do not use tracking cookies or advertising pixels.
+            </p>
+
+            <h2 className="text-xl font-semibold mt-6 mb-3">7. Updates</h2>
+            <p className="mb-4">
+              We may update this policy as Yummii evolves. We’ll update the “Last updated” date above—please review periodically.
             </p>
           </div>
         </div>

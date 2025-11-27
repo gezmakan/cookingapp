@@ -1,6 +1,6 @@
-# CookMe
+# Yummii
 
-A meal planning and recipe management web application built with Next.js and Supabase.
+Yummii is a meal planning and recipe management web application built with Next.js and Supabase.
 
 ## Features
 
