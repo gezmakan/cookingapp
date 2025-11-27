@@ -19,8 +19,11 @@ const store: MealPlanStore = {
 let listeners: Array<() => void> = []
 let pendingFetch: Promise<void> | null = null
 let fetchInitialized = false
+let cachedSnapshot = { ...store }
 
 const notify = () => {
+  // Create new snapshot when notifying
+  cachedSnapshot = { ...store }
   listeners.forEach((listener) => listener())
 }
 
@@ -31,7 +34,7 @@ const subscribe = (listener: () => void) => {
   }
 }
 
-const getSnapshot = () => store
+const getSnapshot = () => cachedSnapshot
 
 // Cached server snapshot to avoid infinite loop
 const serverSnapshot: MealPlanStore = {
