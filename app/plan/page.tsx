@@ -504,8 +504,24 @@ export default function MealPlanPage() {
         return
       }
 
+      // Get the meal data for optimistic update
+      const meal = availableMeals.find(m => m.id === mealId)
+      if (!meal) throw new Error('Meal not found')
+
       const maxOrder = day.meals.length ? Math.max(...day.meals.map(m => m.order_index)) : -1
 
+      // Optimistic update - add meal to UI immediately
+      const tempDayMealId = `temp-${Date.now()}`
+      updateDayMeals(dayId, (meals) => [
+        ...meals,
+        {
+          ...meal,
+          day_meal_id: tempDayMealId,
+          order_index: maxOrder + 1,
+        }
+      ])
+
+      // Save to database in background
       const { error } = await supabase
         .from('meal_plan_day_meals')
         .insert({
@@ -515,10 +531,14 @@ export default function MealPlanPage() {
         })
 
       if (error) throw error
+
+      // Refetch to get the real ID
       await refetch()
     } catch (error) {
       console.error('Error adding meal to day:', error)
       alert('Failed to add meal')
+      // Refetch to revert optimistic update
+      await refetch()
     }
   }
 
@@ -760,22 +780,25 @@ export default function MealPlanPage() {
 
                   {/* Meal Library Sidebar - Desktop Only */}
                   <div className="hidden lg:block lg:w-64 xl:w-72">
-                    <div className="sticky top-4 bg-white border border-orange-100 rounded-3xl shadow-lg p-4 max-h-[calc(100vh-6rem)] flex flex-col">
-                      <h3 className="text-lg font-semibold text-gray-900 font-quicksand mb-3">Meal Library</h3>
+                    <div className="sticky top-4 bg-white border border-orange-100 rounded-3xl shadow-lg max-h-[calc(100vh-6rem)] flex flex-col overflow-hidden">
+                      {/* Header - Always Visible */}
+                      <div className="flex-shrink-0 p-4 pb-3 border-b border-orange-50">
+                        <h3 className="text-lg font-semibold text-gray-900 font-quicksand mb-3">Meal Library</h3>
 
-                      {/* Search */}
-                      <div className="relative mb-3">
-                        <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
-                        <Input
-                          placeholder="Search..."
-                          value={mealSearch}
-                          onChange={(e) => setMealSearch(e.target.value)}
-                          className="pl-8 text-sm h-9"
-                        />
+                        {/* Search */}
+                        <div className="relative">
+                          <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-gray-400" />
+                          <Input
+                            placeholder="Search..."
+                            value={mealSearch}
+                            onChange={(e) => setMealSearch(e.target.value)}
+                            className="pl-8 text-sm h-9"
+                          />
+                        </div>
                       </div>
 
-                      {/* Meals List */}
-                      <div className="flex-1 overflow-y-auto -mx-1 px-1 sidebar-scroll">
+                      {/* Meals List - Scrollable */}
+                      <div className="flex-1 overflow-y-auto p-4 pt-3 sidebar-scroll">
                         {isLoadingMeals ? (
                           <div className="py-8 text-center">
                             <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-orange-600" />
