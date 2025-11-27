@@ -461,6 +461,14 @@ export default function MealPlanPage() {
       const day = days?.find(d => d.id === selectedDayId)
       if (!day) throw new Error('Day not found')
 
+      // Check if meal already exists in this day
+      const mealAlreadyExists = day.meals.some(m => m.id === mealId)
+      if (mealAlreadyExists) {
+        alert('This meal is already in this day')
+        setIsSubmitting(false)
+        return
+      }
+
       const maxOrder = day.meals.length ? Math.max(...day.meals.map(m => m.order_index)) : -1
 
       const { error } = await supabase
@@ -488,6 +496,13 @@ export default function MealPlanPage() {
     try {
       const day = days?.find(d => d.id === dayId)
       if (!day) throw new Error('Day not found')
+
+      // Check if meal already exists in this day
+      const mealAlreadyExists = day.meals.some(m => m.id === mealId)
+      if (mealAlreadyExists) {
+        alert('This meal is already in this day')
+        return
+      }
 
       const maxOrder = day.meals.length ? Math.max(...day.meals.map(m => m.order_index)) : -1
 
