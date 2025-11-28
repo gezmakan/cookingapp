@@ -62,7 +62,7 @@ export function useIngredientStatus(supabase: SupabaseClient, planId: string | n
         if (!user) throw new Error('Not authenticated')
         if (!planId) throw new Error('No plan selected')
 
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('user_ingredient_status')
           .upsert(
             {
@@ -73,8 +73,19 @@ export function useIngredientStatus(supabase: SupabaseClient, planId: string | n
             },
             { onConflict: 'plan_id, ingredient' }
           )
+          .select()
 
-        if (error) throw error
+        console.log('Ingredient status update result:', { data, error, planId, ingredient: normalized, hasItem })
+
+        if (error) {
+          console.error('Ingredient status error details:', {
+            message: error.message,
+            details: error.details,
+            hint: error.hint,
+            code: error.code
+          })
+          throw error
+        }
       } catch (err) {
         // Revert on error
         setStatusMap((prev) => ({

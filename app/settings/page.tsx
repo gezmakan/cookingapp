@@ -92,24 +92,36 @@ export default function SettingsPage() {
 
       // Load plans shared with user
       try {
-        const { data: shared, error: sharedError } = await supabase
+        const { data: shares, error: sharesError } = await supabase
           .from('plan_shares')
-          .select(`
-            id,
-            plan_id,
-            permission,
-            meal_plans (
-              id,
-              name,
-              user_id
-            )
-          `)
+          .select('id, plan_id, permission')
           .eq('shared_with_email', user.email)
 
-        if (!sharedError && shared) {
-          setSharedPlans(shared as SharedPlan[])
-        } else if (sharedError) {
-          console.error('Error loading shared plans:', sharedError)
+        console.log('Shares result:', { shares, sharesError })
+
+        if (sharesError) {
+          console.error('Error loading shares:', sharesError)
+        } else if (shares && shares.length > 0) {
+          // Fetch plan details separately
+          const planIds = shares.map(s => s.plan_id)
+          const { data: sharedPlanDetails, error: plansError } = await supabase
+            .from('meal_plans')
+            .select('id, name, user_id')
+            .in('id', planIds)
+
+          console.log('Shared plan details:', { sharedPlanDetails, plansError, planIds })
+
+          if (!plansError && sharedPlanDetails) {
+            // Combine shares with plan details
+            const combined = shares.map(share => ({
+              id: share.id,
+              plan_id: share.plan_id,
+              permission: share.permission,
+              meal_plans: sharedPlanDetails.find(p => p.id === share.plan_id)!
+            }))
+            console.log('Combined shared plans:', combined)
+            setSharedPlans(combined as SharedPlan[])
+          }
         }
       } catch (shareErr) {
         console.error('Exception loading shared plans:', shareErr)
@@ -127,10 +139,15 @@ export default function SettingsPage() {
     try {
       const { error } = await supabase
         .from('user_preferences')
-        .upsert({
-          user_id: user.id,
-          default_plan_id: planId,
-        })
+        .upsert(
+          {
+            user_id: user.id,
+            default_plan_id: planId,
+          },
+          {
+            onConflict: 'user_id'
+          }
+        )
 
       console.log('Set default plan result:', { error, planId, userId: user.id })
 
@@ -230,12 +247,13 @@ export default function SettingsPage() {
 
       // Generate share token if making public and no token exists
       if (newIsPublic && !shareToken) {
-        const { data, error } = await supabase.rpc('generate_share_token')
-        if (error) throw error
-        shareToken = data
+        // Generate a random 12-character token
+        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        shareToken = Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+        console.log('Generated share token:', shareToken)
       }
 
-      const { error } = await supabase
+      const { data: updateData, error } = await supabase
         .from('meal_plans')
         .update({
           is_public: newIsPublic,
@@ -243,8 +261,14 @@ export default function SettingsPage() {
         })
         .eq('id', plan.id)
         .eq('user_id', user.id)
+        .select()
 
-      if (error) throw error
+      console.log('Update public status result:', { updateData, error, newIsPublic, shareToken })
+
+      if (error) {
+        console.error('Error updating plan:', error)
+        throw error
+      }
 
       // Update local state
       setMyPlans(myPlans.map(p =>
@@ -438,26 +462,51 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              {sharedPlans.map((share) => (
-                <div
-                  key={share.id}
-                  className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                >
-                  <div>
-                    <span className="font-medium">{share.meal_plans.name}</span>
-                    <p className="text-xs text-gray-500">
-                      {share.permission === 'edit' ? 'Can edit' : 'View only'}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push(`/plan?id=${share.plan_id}`)}
+              {sharedPlans.map((share) => {
+                if (!share.meal_plans) {
+                  console.warn('Plan details missing for share:', share)
+                  return null
+                }
+                return (
+                  <div
+                    key={share.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
                   >
-                    View Plan
-                  </Button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-2">
+                      <div>
+                        <span className="font-medium">{share.meal_plans.name}</span>
+                        <p className="text-xs text-gray-500">
+                          {share.permission === 'edit' ? 'Can edit' : 'View only'}
+                        </p>
+                      </div>
+                      {defaultPlanId === share.plan_id && (
+                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full flex items-center gap-1">
+                          <Star className="h-3 w-3 fill-current" />
+                          Default
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {defaultPlanId !== share.plan_id && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setAsDefault(share.plan_id)}
+                        >
+                          Set as Default
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => router.push(`/plan?id=${share.plan_id}`)}
+                      >
+                        View Plan
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })}
             </CardContent>
           </Card>
         )}

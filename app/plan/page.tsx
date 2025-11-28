@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useMealPlanStore } from '@/hooks/useMealPlanStore'
 import { Button } from '@/components/ui/button'
@@ -112,7 +113,7 @@ function SortableMealRow({
 
 export default function MealPlanPage() {
   const supabase = createClient()
-  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+  const searchParams = useSearchParams()
   const requestedPlanId = searchParams.get('id')
 
   const { days, isLoading, error, refetch, updateDayMeals, planId, planName, canEdit } = useMealPlanStore(supabase, requestedPlanId)
@@ -149,6 +150,14 @@ export default function MealPlanPage() {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTitleValue, setEditTitleValue] = useState('')
   const [editSubtitleValue, setEditSubtitleValue] = useState('')
+
+  // Update menu title when plan name loads
+  useEffect(() => {
+    if (planName) {
+      setMenuTitle(planName)
+    }
+  }, [planName])
+
   const activeDays = (days || []).filter((day) => day.is_active)
   const inactiveDays = (days || []).filter((day) => !day.is_active)
   const totalMeals = activeDays.reduce((sum, day) => sum + day.meals.length, 0)
@@ -171,22 +180,25 @@ export default function MealPlanPage() {
 
   const handleSaveTitleSubtitle = async () => {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) return
+      if (!planId) {
+        alert('No plan selected')
+        return
+      }
 
-      const { error } = await supabase
-        .from('user_preferences')
-        .upsert({
-          user_id: user.id,
-          menu_title: editTitleValue.trim() || 'Menu',
-          menu_subtitle: editSubtitleValue.trim(),
-          updated_at: new Date().toISOString(),
-        }, {
-          onConflict: 'user_id'
+      // Update the plan name in meal_plans table
+      const { data, error } = await supabase
+        .from('meal_plans')
+        .update({
+          name: editTitleValue.trim() || 'Menu',
         })
+        .eq('id', planId)
+        .select()
+
+      console.log('Update plan name result:', { data, error, planId, newName: editTitleValue.trim() })
 
       if (error) {
-        console.error('Upsert error:', error)
+        console.error('Update error:', error)
+        alert(`Failed to save: ${error.message}`)
         throw error
       }
 
@@ -194,7 +206,7 @@ export default function MealPlanPage() {
       setMenuSubtitle(editSubtitleValue.trim())
       setIsEditingTitle(false)
     } catch (error) {
-      console.error('Error saving preferences:', error)
+      console.error('Error saving plan name:', error)
       alert('Failed to save')
     }
   }
