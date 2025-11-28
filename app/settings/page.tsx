@@ -33,6 +33,13 @@ type SharedPlan = {
   }
 }
 
+type PublicPlan = {
+  id: string
+  name: string
+  user_id: string
+  share_token: string | null
+}
+
 type UserPreferences = {
   default_plan_id: string | null
 }
@@ -44,6 +51,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [myPlans, setMyPlans] = useState<MealPlan[]>([])
   const [sharedPlans, setSharedPlans] = useState<SharedPlan[]>([])
+  const [publicPlans, setPublicPlans] = useState<PublicPlan[]>([])
   const [defaultPlanId, setDefaultPlanId] = useState<string | null>(null)
   const [newPlanName, setNewPlanName] = useState('')
   const [creating, setCreating] = useState(false)
@@ -125,6 +133,25 @@ export default function SettingsPage() {
         }
       } catch (shareErr) {
         console.error('Exception loading shared plans:', shareErr)
+      }
+
+      // Load public plans
+      try {
+        const { data: publicPlansData, error: publicPlansError } = await supabase
+          .from('meal_plans')
+          .select('id, name, user_id, share_token')
+          .eq('is_public', true)
+          .neq('user_id', user.id)
+          .order('name', { ascending: true })
+          .limit(12)
+
+        if (publicPlansError) {
+          console.error('Error loading public plans:', publicPlansError)
+        } else if (publicPlansData) {
+          setPublicPlans(publicPlansData)
+        }
+      } catch (publicErr) {
+        console.error('Exception loading public plans:', publicErr)
       }
     } catch (err) {
       console.error('Error loading user data:', err)
@@ -286,7 +313,7 @@ export default function SettingsPage() {
           <CardHeader>
             <CardTitle>My Plans</CardTitle>
             <CardDescription>
-              Create up to 3 meal plans. Set one as your default plan.
+              Create up to 3 meal plans and set your default plan. ({myPlans.length} / 3 plans created)
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -378,9 +405,6 @@ export default function SettingsPage() {
                     Create Plan
                   </Button>
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  {myPlans.length} / 3 plans created
-                </p>
               </div>
             )}
 
@@ -393,62 +417,98 @@ export default function SettingsPage() {
         </Card>
 
         {/* Plans Shared With Me */}
-        {sharedPlans.length > 0 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Plans Shared With Me</CardTitle>
-              <CardDescription>
-                Meal plans that others have shared with you
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {sharedPlans.map((share) => {
-                if (!share.meal_plans) {
-                  console.warn('Plan details missing for share:', share)
-                  return null
-                }
-                return (
-                  <div
-                    key={share.id}
-                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                  >
-                    <div className="flex items-center gap-2">
+        {(sharedPlans.length > 0 || publicPlans.length > 0) && (
+          <div className="grid gap-6 md:grid-cols-2">
+            {sharedPlans.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Plans Shared With Me</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {sharedPlans.map((share) => {
+                    if (!share.meal_plans) {
+                      console.warn('Plan details missing for share:', share)
+                      return null
+                    }
+                    return (
+                      <div
+                        key={share.id}
+                        className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div>
+                            <button
+                              type="button"
+                              className="font-medium text-orange-600 hover:underline"
+                              onClick={() => router.push(`/plan?id=${share.plan_id}`)}
+                            >
+                              {share.meal_plans.name}
+                            </button>
+                            <p className="text-xs text-gray-500">
+                              {share.permission === 'edit' ? 'Can edit' : 'View only'}
+                            </p>
+                          </div>
+                          {defaultPlanId === share.plan_id && (
+                            <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full flex items-center gap-1">
+                              <Star className="h-3 w-3 fill-current" />
+                            </span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <div className="flex items-center gap-1">
+                            <Switch
+                              checked={defaultPlanId === share.plan_id}
+                              onCheckedChange={(checked) => {
+                                if (checked && defaultPlanId !== share.plan_id) {
+                                  setAsDefault(share.plan_id)
+                                }
+                              }}
+                            />
+                            <span className="text-sm text-gray-600">Default</span>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </CardContent>
+              </Card>
+            )}
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Public Plans</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {publicPlans.length === 0 ? (
+                  <p className="text-sm text-gray-500">No public plans available yet.</p>
+                ) : (
+                  publicPlans.map((plan) => (
+                    <div
+                      key={plan.id}
+                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                    >
                       <div>
                         <button
                           type="button"
                           className="font-medium text-orange-600 hover:underline"
-                          onClick={() => router.push(`/plan?id=${share.plan_id}`)}
+                          onClick={() => {
+                            if (!plan.share_token) return
+                            router.push(`/plan/share/${plan.share_token}`)
+                          }}
+                          disabled={!plan.share_token}
                         >
-                          {share.meal_plans.name}
+                          {plan.name}
                         </button>
-                        <p className="text-xs text-gray-500">
-                          {share.permission === 'edit' ? 'Can edit' : 'View only'}
-                        </p>
                       </div>
-                      {defaultPlanId === share.plan_id && (
-                        <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full flex items-center gap-1">
-                          <Star className="h-3 w-3 fill-current" />
-                        </span>
+                      {!plan.share_token && (
+                        <span className="text-xs text-gray-400">No link</span>
                       )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="flex items-center gap-1">
-                        <Switch
-                          checked={defaultPlanId === share.plan_id}
-                          onCheckedChange={(checked) => {
-                            if (checked && defaultPlanId !== share.plan_id) {
-                              setAsDefault(share.plan_id)
-                            }
-                          }}
-                        />
-                        <span className="text-sm text-gray-600">Default</span>
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </CardContent>
-          </Card>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          </div>
         )}
 
         {/* Share Plan Modal */}
