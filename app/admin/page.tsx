@@ -43,6 +43,10 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedVideo, setSelectedVideo] = useState<{ url: string; title: string } | null>(null)
   const [currentUser, setCurrentUser] = useState<any>(null)
+  const [publicPlans, setPublicPlans] = useState<{ id: string; name: string }[]>([])
+  const [publicPlanId, setPublicPlanId] = useState<string | null>(null)
+  const [pendingPublicPlanId, setPendingPublicPlanId] = useState<string>('')
+  const [isSavingPublicPlan, setIsSavingPublicPlan] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -61,7 +65,8 @@ export default function AdminPage() {
     setCurrentUser(user)
     await Promise.all([
       fetchUsers(),
-      fetchAllMeals()
+      fetchAllMeals(),
+      fetchPublicPlanSetting()
     ])
     setIsLoading(false)
   }
@@ -138,6 +143,39 @@ export default function AdminPage() {
     }
   }
 
+  const fetchPublicPlanSetting = async () => {
+    try {
+      const [plansResult, settingsResult] = await Promise.all([
+        supabase
+          .from('meal_plans')
+          .select('id, name')
+          .eq('is_public', true)
+          .order('name'),
+        supabase
+          .from('app_settings')
+          .select('public_plan_id')
+          .eq('id', 1)
+          .single()
+      ])
+
+      if (!plansResult.error && plansResult.data) {
+        setPublicPlans(plansResult.data)
+      } else if (plansResult.error) {
+        console.error('Error loading public plans:', plansResult.error)
+      }
+
+      if (!settingsResult.error && settingsResult.data) {
+        const settingId = settingsResult.data.public_plan_id || ''
+        setPublicPlanId(settingId || null)
+        setPendingPublicPlanId(settingId)
+      } else if (settingsResult.error && settingsResult.error.code !== 'PGRST116') {
+        console.error('Error loading app settings:', settingsResult.error)
+      }
+    } catch (error) {
+      console.error('Error fetching public plan setting:', error)
+    }
+  }
+
   const forcePrivate = async (mealId: string, currentPrivate: boolean) => {
     if (currentPrivate) {
       alert('This meal is already private')
@@ -181,6 +219,36 @@ export default function AdminPage() {
     }
   }
 
+  const handleSavePublicPlan = async () => {
+    if (!pendingPublicPlanId) {
+      alert('Select a public plan to feature')
+      return
+    }
+
+    setIsSavingPublicPlan(true)
+    try {
+      const { error } = await supabase
+        .from('app_settings')
+        .update({
+          public_plan_id: pendingPublicPlanId,
+          updated_by: currentUser?.id ?? null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', 1)
+
+      if (error) throw error
+
+      setPublicPlanId(pendingPublicPlanId)
+      await fetchPublicPlanSetting()
+      alert('Updated the featured public plan.')
+    } catch (error) {
+      console.error('Error saving public plan:', error)
+      alert('Failed to update the public plan')
+    } finally {
+      setIsSavingPublicPlan(false)
+    }
+  }
+
   const deleteUser = async (userToDelete: User) => {
     if (!confirm(`Delete ${userToDelete.email} and all of their data? This cannot be undone.`)) return
     try {
@@ -202,6 +270,9 @@ export default function AdminPage() {
     )
   }
 
+  const currentPublicPlanName = publicPlans.find((plan) => plan.id === publicPlanId)?.name
+  const hasPendingChange = pendingPublicPlanId !== '' && pendingPublicPlanId !== (publicPlanId || '')
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-50">
       <div className="container mx-auto px-4 py-8 max-w-7xl">
@@ -219,10 +290,11 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="meals" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="meals">All Meals</TabsTrigger>
-            <TabsTrigger value="users">Users</TabsTrigger>
-          </TabsList>
+        <TabsList>
+          <TabsTrigger value="meals">All Meals</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="public-plan">Public Plan</TabsTrigger>
+        </TabsList>
 
           <TabsContent value="meals">
             <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -357,6 +429,60 @@ export default function AdminPage() {
                   )}
                 </TableBody>
               </Table>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="public-plan">
+            <div className="bg-white rounded-lg shadow p-6 space-y-6">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Featured Public Plan</h2>
+                <p className="text-sm text-gray-600 mt-2">
+                  Choose which public meal plan logged-out visitors should see on the Plan page.
+                </p>
+              </div>
+
+              {publicPlans.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  There are no public plans available yet. Mark at least one plan as public to enable this feature.
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Public plan to showcase
+                    </label>
+                    <select
+                      className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 text-gray-900"
+                      value={pendingPublicPlanId}
+                      onChange={(e) => setPendingPublicPlanId(e.target.value)}
+                    >
+                      <option value="">Select a plan...</option>
+                      {publicPlans.map((plan) => (
+                        <option key={plan.id} value={plan.id}>
+                          {plan.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                      onClick={handleSavePublicPlan}
+                      disabled={!hasPendingChange || isSavingPublicPlan}
+                    >
+                      {isSavingPublicPlan ? 'Saving...' : 'Save Selection'}
+                    </Button>
+                    <span className="text-sm text-gray-600">
+                      Current selection:{' '}
+                      {currentPublicPlanName
+                        ? <span className="font-medium text-gray-900">{currentPublicPlanName}</span>
+                        : publicPlanId
+                          ? 'Plan not available'
+                          : 'None'}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>

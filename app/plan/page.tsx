@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect } from 'react'
+import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useMealPlanStore } from '@/hooks/useMealPlanStore'
@@ -117,7 +118,7 @@ function MealPlanContent() {
   const router = useRouter()
   const requestedPlanId = searchParams.get('id')
 
-  const { days, isLoading, error, refetch, updateDayMeals, planId, planName, planSubtitle, canEdit } = useMealPlanStore(supabase, requestedPlanId)
+  const { days, isLoading, error, refetch, updateDayMeals, planId, planName, planSubtitle, canEdit, isAuthenticated } = useMealPlanStore(supabase, requestedPlanId)
 
   const [isEditMode, setIsEditMode] = useState(false)
 
@@ -713,18 +714,23 @@ function MealPlanContent() {
               {isEditingTitle ? (
                 titleEditor
               ) : (
-                <div className="group cursor-pointer" onClick={handleStartEditingTitle}>
+                <div
+                  className={`${canEdit ? 'group cursor-pointer' : ''}`}
+                  onClick={canEdit ? handleStartEditingTitle : undefined}
+                >
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-3">
                       <h1 className="text-3xl font-bold text-gray-900">{menuTitle}</h1>
-                      <Edit2 className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      {canEdit && (
+                        <Edit2 className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
                     </div>
                     {menuSubtitle && <p className="text-gray-600">{menuSubtitle}</p>}
                   </div>
                 </div>
               )}
               <div className="flex flex-col gap-3 items-start lg:items-end w-full lg:w-auto">
-                {planOptions.length > 0 && (
+                {isAuthenticated && planOptions.length > 0 && (
                   <div className="grid grid-cols-2 gap-2 w-full lg:w-96">
                     <select
                       value={planSwitcherValue}
@@ -758,7 +764,7 @@ function MealPlanContent() {
                     )}
                   </div>
                 )}
-                {canEdit && (
+                {isAuthenticated && canEdit && (
                   <Button
                     variant={isEditMode ? 'default' : 'outline'}
                     size="sm"
@@ -1123,14 +1129,16 @@ function MealPlanContent() {
                     </div>
                     {heroSubtitle && <p className="text-lg text-orange-50/80 mt-2 max-w-2xl">{heroSubtitle}</p>}
                   </div>
-                  <div className="flex flex-wrap gap-3 print:hidden mt-2 lg:mt-0">
-                    <Button
-                      className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
-                      onClick={() => setIsShoppingListOpen(true)}
-                    >
-                      Shopping List
-                    </Button>
-                  </div>
+                  {isAuthenticated && (
+                    <div className="flex flex-wrap gap-3 print:hidden mt-2 lg:mt-0">
+                      <Button
+                        className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
+                        onClick={() => setIsShoppingListOpen(true)}
+                      >
+                        Shopping List
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -1228,15 +1236,28 @@ function MealPlanContent() {
                 </div>
               </div>
             )}
-            <div className="print:hidden flex justify-center mt-10">
-              <Button
-                className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
-                onClick={() => setIsEditMode(true)}
-              >
-                <Edit2 className="h-4 w-4 mr-2" />
-                Edit Plan
-              </Button>
-            </div>
+            {isAuthenticated && canEdit ? (
+              <div className="print:hidden flex justify-center mt-10">
+                <Button
+                  className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
+                  onClick={() => setIsEditMode(true)}
+                >
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Edit Plan
+                </Button>
+              </div>
+            ) : (
+              !isAuthenticated && (
+                <div className="print:hidden flex justify-center mt-10">
+                  <Button
+                    asChild
+                    className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
+                  >
+                    <Link href="/signup">Sign up to create your own plan</Link>
+                  </Button>
+                </div>
+              )
+            )}
           </>
         )}
       </div>
@@ -1392,14 +1413,16 @@ function MealPlanContent() {
         />
       )}
 
-      <ShoppingListModal
-        isOpen={isShoppingListOpen}
-        onClose={() => setIsShoppingListOpen(false)}
-        days={days || []}
-        statusMap={ingredientStatus.statusMap}
-        onToggleIngredient={ingredientStatus.setIngredientStatus}
-        onReset={ingredientStatus.resetStatuses}
-      />
+      {isAuthenticated && (
+        <ShoppingListModal
+          isOpen={isShoppingListOpen}
+          onClose={() => setIsShoppingListOpen(false)}
+          days={days || []}
+          statusMap={ingredientStatus.statusMap}
+          onToggleIngredient={ingredientStatus.setIngredientStatus}
+          onReset={ingredientStatus.resetStatuses}
+        />
+      )}
 
       <Footer />
     </div>

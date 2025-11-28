@@ -39,16 +39,14 @@ export default function Footer() {
             >
               Meal Library
             </Link>
-            {user && (
-              <Link
-                href="/plan"
-                className={`${
-                  pathname === '/plan' ? 'text-orange-600' : 'text-gray-700 hover:text-orange-600'
-                }`}
-              >
-                Meal Plan
-              </Link>
-            )}
+            <Link
+              href="/plan"
+              className={`${
+                pathname === '/plan' ? 'text-orange-600' : 'text-gray-700 hover:text-orange-600'
+              }`}
+            >
+              Meal Plan
+            </Link>
             <Link
               href={user ? '/meals/add' : '/signup'}
               className={`${

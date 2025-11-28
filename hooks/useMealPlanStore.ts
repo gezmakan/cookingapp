@@ -19,9 +19,8 @@ type MealPlanState = {
   planName: string | null
   planSubtitle: string | null
   canEdit: boolean
+  isAuthenticated: boolean
 }
-
-const DEFAULT_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
 export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: string | null) {
   const [state, setState] = useState<MealPlanState>({
@@ -32,25 +31,11 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
     planName: null,
     planSubtitle: null,
     canEdit: false,
+    isAuthenticated: false,
   })
 
   const isMountedRef = useRef(false)
   const initialLoadRef = useRef(true)
-  const defaultDaysSeededRef = useRef(false)
-
-  const seedDefaultDays = useCallback(async (userId: string, planId: string) => {
-    const rows = DEFAULT_DAY_NAMES.map((name, idx) => ({
-      user_id: userId,
-      plan_id: planId,
-      day_name: name,
-      order_index: idx,
-      is_active: true,
-    }))
-
-    const { error } = await supabase.from('meal_plan_days').insert(rows)
-    if (error) throw error
-  }, [supabase])
-
   const fetchPlan = useCallback(async (showLoading: boolean) => {
     if (showLoading) {
       setState((prev) => ({ ...prev, isLoading: true, error: null }))
@@ -58,56 +43,53 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
       setState((prev) => ({ ...prev, error: null }))
     }
 
+    let derivedAuthState = false
+
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       if (sessionError) throw sessionError
 
       const userId = session?.user?.id
       const userEmail = session?.user?.email
-
-      if (!userId) {
-        if (isMountedRef.current) {
-          setState({
-            days: [],
-            isLoading: false,
-            error: null,
-            planId: null,
-            planName: null,
-            planSubtitle: null,
-            canEdit: false,
-          })
-        }
-        initialLoadRef.current = false
-        defaultDaysSeededRef.current = false
-        return
-      }
+      derivedAuthState = !!userId
 
       let planId = requestedPlanId
       let canEdit = false
       let planName = ''
       let planSubtitle: string | null = null
 
-      // If no specific plan requested, load the default plan
-      if (!planId) {
-        const { data: prefs } = await supabase
-          .from('user_preferences')
-          .select('default_plan_id')
-          .eq('user_id', userId)
+      if (derivedAuthState) {
+        // If no specific plan requested, load the default plan
+        if (!planId) {
+          const { data: prefs } = await supabase
+            .from('user_preferences')
+            .select('default_plan_id')
+            .eq('user_id', userId)
+            .single()
+
+          planId = prefs?.default_plan_id || null
+
+          // If no default plan set, get the user's first plan
+          if (!planId) {
+            const { data: plans } = await supabase
+              .from('meal_plans')
+              .select('id')
+              .eq('user_id', userId)
+              .order('created_at', { ascending: true })
+              .limit(1)
+
+            planId = plans?.[0]?.id || null
+          }
+        }
+      } else if (!planId) {
+        const { data: settings, error: settingsError } = await supabase
+          .from('app_settings')
+          .select('public_plan_id')
+          .eq('id', 1)
           .single()
 
-        planId = prefs?.default_plan_id || null
-
-        // If no default plan set, get the user's first plan
-        if (!planId) {
-          const { data: plans } = await supabase
-            .from('meal_plans')
-            .select('id')
-            .eq('user_id', userId)
-            .order('created_at', { ascending: true })
-            .limit(1)
-
-          planId = plans?.[0]?.id || null
-        }
+        if (settingsError) throw settingsError
+        planId = settings?.public_plan_id || null
       }
 
       if (!planId) {
@@ -120,6 +102,7 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
             planName: null,
             planSubtitle: null,
             canEdit: false,
+            isAuthenticated: derivedAuthState,
           })
         }
         initialLoadRef.current = false
@@ -141,19 +124,25 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
       planName = plan.name
       planSubtitle = plan.subtitle || null
 
-      // Determine if user can edit
-      if (plan.user_id === userId) {
-        canEdit = true
-      } else if (userEmail) {
-        // Check if plan is shared with edit permission
-        const { data: share } = await supabase
-          .from('plan_shares')
-          .select('permission')
-          .eq('plan_id', planId)
-          .eq('shared_with_email', userEmail)
-          .single()
+      if (!derivedAuthState && !plan.is_public) {
+        throw new Error('Plan is not public')
+      }
 
-        canEdit = share?.permission === 'edit'
+      // Determine if user can edit
+      if (derivedAuthState) {
+        if (plan.user_id === userId) {
+          canEdit = true
+        } else if (userEmail) {
+          // Check if plan is shared with edit permission
+          const { data: share } = await supabase
+            .from('plan_shares')
+            .select('permission')
+            .eq('plan_id', planId)
+            .eq('shared_with_email', userEmail)
+            .single()
+
+          canEdit = share?.permission === 'edit'
+        }
       }
 
       // Load days for this plan
@@ -223,6 +212,7 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
           planName: planName,
           planSubtitle,
           canEdit: canEdit,
+          isAuthenticated: derivedAuthState,
         })
       }
     } catch (error) {
@@ -236,12 +226,13 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
           planName: null,
           planSubtitle: null,
           canEdit: false,
+          isAuthenticated: derivedAuthState,
         })
       }
     } finally {
       initialLoadRef.current = false
     }
-  }, [supabase, seedDefaultDays, requestedPlanId])
+  }, [supabase, requestedPlanId])
 
   useEffect(() => {
     isMountedRef.current = true
