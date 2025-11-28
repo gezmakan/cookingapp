@@ -205,10 +205,11 @@ function MealPlanContent() {
         }
 
         if (!sharedResult.error && sharedResult.data) {
-          const validShared = sharedResult.data
-            .map((share) => {
-              if (!share.meal_plans) return null
-              return { id: share.meal_plans.id, name: share.meal_plans.name }
+          const validShared = (sharedResult.data ?? [])
+            .map((share: any) => {
+              const planData = Array.isArray(share.meal_plans) ? share.meal_plans[0] : share.meal_plans
+              if (!planData?.id || !planData?.name) return null
+              return { id: planData.id as string, name: planData.name as string }
             })
             .filter((plan): plan is { id: string; name: string } => !!plan)
           setSharedPlans(validShared)
@@ -251,9 +252,9 @@ function MealPlanContent() {
   const ingredientStatus = useIngredientStatus(supabase, planId)
   const handleExportPlan = () => window.print()
   const planOptions = (() => {
-    const map = new Map<string, string>()
-    ownedPlans.forEach((plan) => map.set(plan.id, plan.name))
-    sharedPlans.forEach((plan) => map.set(plan.id, plan.name))
+      const map = new Map<string, string>()
+      ownedPlans.forEach((plan) => map.set(plan.id, plan.name))
+      sharedPlans.forEach((plan) => map.set(plan.id, plan.name))
     if (planId && !map.has(planId)) {
       map.set(planId, menuTitle || 'Current Plan')
     }
