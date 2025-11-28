@@ -91,10 +91,21 @@ function SortableMealRow({
           }
         }}
       >
-        <div className="flex items-start gap-2 min-w-0">
-          <h4 className={`font-medium text-gray-900 line-clamp-2 ${meal.video_url && !isEditMode ? 'hover:text-orange-600 transition-colors' : ''}`} title={meal.name}>
-            {meal.name}
-          </h4>
+        <div className="flex items-start gap-2.5 min-w-0">
+          <span className="h-1.5 w-1.5 rounded-full bg-orange-500 mt-2.5" aria-hidden="true" />
+          <div className="min-w-0">
+            <h4
+              className={`text-base md:text-lg font-semibold text-gray-900 tracking-tight line-clamp-2 ${meal.video_url && !isEditMode ? 'hover:text-orange-600 transition-colors' : ''}`}
+              title={meal.name}
+            >
+              {meal.name}
+            </h4>
+            {meal.cuisine_type && (
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-400 mt-1">
+                {meal.cuisine_type}
+              </p>
+            )}
+          </div>
           {!isEditMode && meal.video_url && (
             <Video className="h-3.5 w-3.5 text-orange-600 flex-shrink-0 mt-0.5" />
           )}
@@ -283,8 +294,6 @@ function MealPlanContent() {
         })
         .eq('id', planId)
         .select()
-
-      console.log('Update plan details result:', { data, error, planId, newName: trimmedTitle, newSubtitle: trimmedSubtitle })
 
       if (error) {
         console.error('Update error:', error)
@@ -1290,10 +1299,17 @@ function MealPlanContent() {
                                     }
                                   }}
                                 >
-                                  <div className="flex items-start justify-between gap-4">
-                                    <div className="min-w-0">
-                                      <p className="font-medium text-gray-900 line-clamp-2">{meal.name}</p>
-                                    </div>
+                                    <div className="flex items-start justify-between gap-4">
+                                      <div className="min-w-0">
+                                        <p className="text-base font-semibold text-gray-900 tracking-tight line-clamp-2">
+                                          {meal.name}
+                                        </p>
+                                        {meal.cuisine_type && (
+                                          <span className="text-[11px] uppercase tracking-[0.25em] text-gray-400">
+                                            {meal.cuisine_type}
+                                          </span>
+                                        )}
+                                      </div>
                                     {!meal.video_url && (
                                       <span className="text-xs text-gray-400">No video</span>
                                     )}
@@ -1472,11 +1488,16 @@ function MealPlanContent() {
                       {/* Meal Info */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start gap-2">
-                          <h4 className="font-medium text-gray-900 line-clamp-2">{meal.name}</h4>
+                          <h4 className="text-base font-semibold text-gray-900 tracking-tight line-clamp-2">{meal.name}</h4>
                           {meal.video_url && (
                             <Video className="h-3.5 w-3.5 text-orange-600 flex-shrink-0 mt-0.5" />
                           )}
                         </div>
+                        {meal.cuisine_type && (
+                          <p className="text-[11px] uppercase tracking-[0.25em] text-gray-400 mt-1">
+                            {meal.cuisine_type}
+                          </p>
+                        )}
                       </div>
                     </button>
                   )

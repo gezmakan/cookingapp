@@ -75,8 +75,6 @@ export function useIngredientStatus(supabase: SupabaseClient, planId: string | n
           )
           .select()
 
-        console.log('Ingredient status update result:', { data, error, planId, ingredient: normalized, hasItem })
-
         if (error) {
           console.error('Ingredient status error details:', {
             message: error.message,

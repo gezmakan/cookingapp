@@ -79,8 +79,6 @@ export default function SettingsPage() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: true })
 
-      console.log('Plans query result:', { plans, plansError })
-
       if (!plansError && plans) {
         setMyPlans(plans)
       } else if (plansError) {
@@ -105,8 +103,6 @@ export default function SettingsPage() {
           .select('id, plan_id, permission')
           .eq('shared_with_email', user.email)
 
-        console.log('Shares result:', { shares, sharesError })
-
         if (sharesError) {
           console.error('Error loading shares:', sharesError)
         } else if (shares && shares.length > 0) {
@@ -117,8 +113,6 @@ export default function SettingsPage() {
             .select('id, name, subtitle, user_id')
             .in('id', planIds)
 
-          console.log('Shared plan details:', { sharedPlanDetails, plansError, planIds })
-
           if (!plansError && sharedPlanDetails) {
             // Combine shares with plan details
             const combined = shares.map(share => ({
@@ -127,7 +121,6 @@ export default function SettingsPage() {
               permission: share.permission,
               meal_plans: sharedPlanDetails.find(p => p.id === share.plan_id)!
             }))
-            console.log('Combined shared plans:', combined)
             setSharedPlans(combined as SharedPlan[])
           }
         }
@@ -175,8 +168,6 @@ export default function SettingsPage() {
             onConflict: 'user_id'
           }
         )
-
-      console.log('Set default plan result:', { error, planId, userId: user.id })
 
       if (error) {
         console.error('Error details:', {

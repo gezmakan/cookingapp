@@ -298,7 +298,7 @@ export default function MealsPage() {
                 {uniqueCuisineTypes.map(cuisine => (
                   <button
                     key={cuisine}
-                    onClick={() => handleSelectCuisine(cuisine)}
+                    onClick={() => handleSelectCuisine(selectedCuisine === cuisine ? null : cuisine)}
                     className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
                       selectedCuisine === cuisine
                         ? 'bg-orange-500 text-white'
