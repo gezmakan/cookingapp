@@ -17,6 +17,7 @@ type MealPlanState = {
   error: string | null
   planId: string | null
   planName: string | null
+  planSubtitle: string | null
   canEdit: boolean
 }
 
@@ -29,6 +30,7 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
     error: null,
     planId: null,
     planName: null,
+    planSubtitle: null,
     canEdit: false,
   })
 
@@ -71,6 +73,7 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
             error: null,
             planId: null,
             planName: null,
+            planSubtitle: null,
             canEdit: false,
           })
         }
@@ -82,6 +85,7 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
       let planId = requestedPlanId
       let canEdit = false
       let planName = ''
+      let planSubtitle: string | null = null
 
       // If no specific plan requested, load the default plan
       if (!planId) {
@@ -114,6 +118,7 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
             error: 'No meal plan found',
             planId: null,
             planName: null,
+            planSubtitle: null,
             canEdit: false,
           })
         }
@@ -124,7 +129,7 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
       // Load the plan details
       const { data: plan, error: planError } = await supabase
         .from('meal_plans')
-        .select('id, name, user_id, is_public')
+        .select('id, name, subtitle, user_id, is_public')
         .eq('id', planId)
         .single()
 
@@ -134,6 +139,7 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
       }
 
       planName = plan.name
+      planSubtitle = plan.subtitle || null
 
       // Determine if user can edit
       if (plan.user_id === userId) {
@@ -215,6 +221,7 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
           error: null,
           planId: planId,
           planName: planName,
+          planSubtitle,
           canEdit: canEdit,
         })
       }
@@ -227,6 +234,7 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
           error: error instanceof Error ? error.message : 'Failed to load meal plan',
           planId: null,
           planName: null,
+          planSubtitle: null,
           canEdit: false,
         })
       }

@@ -15,6 +15,7 @@ import SharePlanModal from '@/components/SharePlanModal'
 type MealPlan = {
   id: string
   name: string
+  subtitle: string | null
   user_id: string
   created_at: string
   is_public: boolean
@@ -28,6 +29,7 @@ type SharedPlan = {
   meal_plans: {
     id: string
     name: string
+    subtitle: string | null
     user_id: string
   }
 }
@@ -67,7 +69,7 @@ export default function SettingsPage() {
       // Load user's owned plans
       const { data: plans, error: plansError} = await supabase
         .from('meal_plans')
-        .select('id, name, user_id, created_at, is_public, share_token')
+        .select('id, name, subtitle, user_id, created_at, is_public, share_token')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true })
 
@@ -106,7 +108,7 @@ export default function SettingsPage() {
           const planIds = shares.map(s => s.plan_id)
           const { data: sharedPlanDetails, error: plansError } = await supabase
             .from('meal_plans')
-            .select('id, name, user_id')
+            .select('id, name, subtitle, user_id')
             .in('id', planIds)
 
           console.log('Shared plan details:', { sharedPlanDetails, plansError, planIds })

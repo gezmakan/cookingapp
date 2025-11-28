@@ -43,6 +43,7 @@ type Day = {
 type MealPlan = {
   id: string
   name: string
+  subtitle: string | null
   days: Day[]
 }
 
@@ -67,7 +68,7 @@ export default function PublicPlanPage() {
       // Find the plan by share token
       const { data: planData, error: planError } = await supabase
         .from('meal_plans')
-        .select('id, name, is_public, share_token')
+        .select('id, name, subtitle, is_public, share_token')
         .eq('share_token', token)
         .eq('is_public', true)
         .single()
@@ -138,6 +139,7 @@ export default function PublicPlanPage() {
       setPlan({
         id: planData.id,
         name: planData.name,
+        subtitle: planData.subtitle,
         days,
       })
     } catch (err) {
@@ -182,7 +184,8 @@ export default function PublicPlanPage() {
 
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 font-quicksand">{plan.name}</h1>
-          <p className="text-sm text-gray-500">Public meal plan</p>
+          <p className="text-lg text-gray-600">{plan.subtitle || 'Plan your weekly meals'}</p>
+          <p className="text-sm text-gray-500 mt-1">Public meal plan</p>
         </div>
 
         {/* Days Grid */}

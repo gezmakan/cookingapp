@@ -116,7 +116,7 @@ function MealPlanContent() {
   const searchParams = useSearchParams()
   const requestedPlanId = searchParams.get('id')
 
-  const { days, isLoading, error, refetch, updateDayMeals, planId, planName, canEdit } = useMealPlanStore(supabase, requestedPlanId)
+  const { days, isLoading, error, refetch, updateDayMeals, planId, planName, planSubtitle, canEdit } = useMealPlanStore(supabase, requestedPlanId)
 
   const [isEditMode, setIsEditMode] = useState(false)
 
@@ -158,6 +158,11 @@ function MealPlanContent() {
     }
   }, [planName])
 
+  // Keep subtitle in sync with the plan
+  useEffect(() => {
+    setMenuSubtitle(planSubtitle ?? 'Plan your weekly meals')
+  }, [planSubtitle])
+
   const activeDays = (days || []).filter((day) => day.is_active)
   const inactiveDays = (days || []).filter((day) => !day.is_active)
   const totalMeals = activeDays.reduce((sum, day) => sum + day.meals.length, 0)
@@ -185,16 +190,20 @@ function MealPlanContent() {
         return
       }
 
+      const trimmedTitle = editTitleValue.trim() || 'Menu'
+      const trimmedSubtitle = editSubtitleValue.trim()
+
       // Update the plan name in meal_plans table
       const { data, error } = await supabase
         .from('meal_plans')
         .update({
-          name: editTitleValue.trim() || 'Menu',
+          name: trimmedTitle,
+          subtitle: trimmedSubtitle || null,
         })
         .eq('id', planId)
         .select()
 
-      console.log('Update plan name result:', { data, error, planId, newName: editTitleValue.trim() })
+      console.log('Update plan details result:', { data, error, planId, newName: trimmedTitle, newSubtitle: trimmedSubtitle })
 
       if (error) {
         console.error('Update error:', error)
@@ -202,8 +211,8 @@ function MealPlanContent() {
         throw error
       }
 
-      setMenuTitle(editTitleValue.trim() || 'Menu')
-      setMenuSubtitle(editSubtitleValue.trim())
+      setMenuTitle(trimmedTitle)
+      setMenuSubtitle(trimmedSubtitle)
       setIsEditingTitle(false)
     } catch (error) {
       console.error('Error saving plan name:', error)
@@ -244,33 +253,6 @@ function MealPlanContent() {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   )
-
-  // Load user preferences
-  useEffect(() => {
-    const loadPreferences = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser()
-        if (!user) return
-
-        const { data, error } = await supabase
-          .from('user_preferences')
-          .select('menu_title, menu_subtitle')
-          .eq('user_id', user.id)
-          .single()
-
-        if (error && error.code !== 'PGRST116') throw error
-
-        if (data) {
-          setMenuTitle(data.menu_title || 'Menu')
-          setMenuSubtitle(data.menu_subtitle || 'Plan your weekly meals')
-        }
-      } catch (error) {
-        console.error('Error loading preferences:', error)
-      }
-    }
-
-    loadPreferences()
-  }, [])
 
   // Load meals for sidebar when in edit mode
   useEffect(() => {
