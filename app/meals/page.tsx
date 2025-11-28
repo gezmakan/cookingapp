@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Plus, Edit, Video, Search, Lock, Globe, Sparkles } from 'lucide-react'
@@ -229,7 +230,14 @@ export default function MealsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-50 text-2xl md:text-3xl font-semibold text-gray-700">
-        <span role="img" aria-label="cooking" className="mr-3">👨‍🍳</span>
+        <Image
+          src="/yummii_logo.png"
+          alt="Yummii logo"
+          width={48}
+          height={48}
+          className="mr-3 h-10 w-10 md:h-12 md:w-12 rounded-full object-cover"
+          priority
+        />
         Loading recipes...
       </div>
     )

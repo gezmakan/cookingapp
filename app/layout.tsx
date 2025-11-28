@@ -22,6 +22,11 @@ const quicksand = Quicksand({
 export const metadata: Metadata = {
   title: "Yummii - Meal Planner",
   description: "Plan your weekly meals and organize your favorite recipes",
+  icons: {
+    icon: "/yummii_logo.png",
+    shortcut: "/yummii_logo.png",
+    apple: "/yummii_logo.png",
+  },
 };
 
 export default function RootLayout({

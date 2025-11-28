@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { usePathname } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { Input } from '@/components/ui/input'
 import { Search } from 'lucide-react'
 
@@ -36,10 +37,19 @@ export default function Navbar({ searchQuery, onSearchChange }: NavbarProps) {
         <div className="flex items-center justify-between gap-4 h-14">
           <Link
             href="/plan"
-            className="flex items-center gap-1 md:gap-2 font-semibold text-gray-800 text-sm md:text-lg shrink-0"
+            className="flex items-center gap-0.5 font-semibold text-gray-800 text-sm md:text-lg shrink-0"
           >
-            <span role="img" aria-label="cooking" className="text-base md:text-xl">👨‍🍳</span>
-            <span>Yummii</span>
+            <Image
+              src="/yummii_logo.png"
+              alt="Yummii logo"
+              width={44}
+              height={44}
+              className="h-10 w-10 md:h-12 md:w-12 rounded-full object-cover"
+              priority
+            />
+            <span className="font-quicksand text-lg md:text-2xl text-gray-900">
+              Yummii
+            </span>
           </Link>
 
           <div className="flex items-center gap-3 flex-1 justify-end">
