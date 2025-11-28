@@ -20,7 +20,7 @@ const quicksand = Quicksand({
 });
 
 export const metadata: Metadata = {
-  title: "Yummii - Meal Planner",
+  title: "Yummii — Weekly Meal Planner",
   description: "Plan your weekly meals and organize your favorite recipes",
   icons: {
     icon: "/yummii_logo.png",

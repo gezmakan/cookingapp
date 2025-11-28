@@ -105,7 +105,9 @@ export default function Footer() {
               </button>)
             </p>
           )}
-          <p>© Yummii</p>
+          <p className="text-sm md:text-base text-gray-500 font-semibold">
+            © Yummii — Your weekly meal planner
+          </p>
         </div>
       </div>
     </footer>

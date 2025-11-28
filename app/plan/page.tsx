@@ -46,11 +46,13 @@ import { useIngredientStatus } from '@/hooks/useIngredientStatus'
 // Sortable Meal Row Component
 function SortableMealRow({
   meal,
+  dayId,
   isEditMode,
   onVideoClick,
   onDelete,
 }: {
   meal: DayMeal
+  dayId: string
   isEditMode: boolean
   onVideoClick: () => void
   onDelete: () => void
@@ -62,7 +64,7 @@ function SortableMealRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: meal.day_meal_id })
+  } = useSortable({ id: meal.day_meal_id, data: { dayId } })
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -500,29 +502,105 @@ function MealPlanContent() {
     setEditingDayName('')
   }
 
-  const handleDragEnd = async (dayId: string, event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
-    if (!over || active.id === over.id) {
+    if (!over) {
       return
     }
 
-    const day = days?.find(d => d.id === dayId)
-    if (!day) return
+    const activeContainerId = active.data.current?.sortable?.containerId as string | undefined
+    const overContainerId =
+      (over.data.current?.sortable?.containerId as string | undefined) ?? (over.id as string | undefined)
 
-    const oldIndex = day.meals.findIndex(m => m.day_meal_id === active.id)
-    const newIndex = day.meals.findIndex(m => m.day_meal_id === over.id)
+    if (!activeContainerId || !overContainerId) {
+      return
+    }
 
-    const newMeals = arrayMove(day.meals, oldIndex, newIndex)
-    const previousMeals = day.meals
+    const sourceDay = days?.find((d) => d.id === activeContainerId)
+    const targetDay = days?.find((d) => d.id === overContainerId)
 
-    updateDayMeals(dayId, () => newMeals)
+    if (!sourceDay || !targetDay) {
+      return
+    }
 
-    try {
-      const updates = newMeals.map((meal, idx) => ({
-        id: meal.day_meal_id,
+    const activeIndex =
+      active.data.current?.sortable?.index ??
+      sourceDay.meals.findIndex((meal) => meal.day_meal_id === active.id)
+
+    if (activeIndex === -1) {
+      return
+    }
+
+    const targetIndexFromEvent = over.data.current?.sortable?.index
+    const fallbackTargetIndex = targetDay.meals.findIndex((meal) => meal.day_meal_id === over.id)
+    let targetIndex =
+      targetIndexFromEvent !== undefined && targetIndexFromEvent !== null
+        ? targetIndexFromEvent
+        : fallbackTargetIndex
+    if (targetIndex < 0) {
+      targetIndex = targetDay.meals.length
+    }
+
+    if (activeContainerId === overContainerId) {
+      if (targetIndex >= sourceDay.meals.length) {
+        targetIndex = sourceDay.meals.length - 1
+      }
+
+      if (activeIndex === targetIndex) {
+        return
+      }
+
+      const previousMeals = sourceDay.meals
+      const reordered = arrayMove(sourceDay.meals, activeIndex, targetIndex).map((meal, idx) => ({
+        ...meal,
         order_index: idx,
       }))
+      updateDayMeals(sourceDay.id, () => reordered)
+
+      try {
+        for (const meal of reordered) {
+          await supabase
+            .from('meal_plan_day_meals')
+            .update({ order_index: meal.order_index })
+            .eq('id', meal.day_meal_id)
+        }
+
+        refetch()
+      } catch (error) {
+        updateDayMeals(sourceDay.id, () => previousMeals)
+        console.error('Error reordering meals:', error)
+        alert('Failed to reorder meals')
+      }
+
+      return
+    }
+
+    const previousSource = sourceDay.meals
+    const previousTarget = targetDay.meals
+    const mealToMove = sourceDay.meals[activeIndex]
+
+    const sourceWithoutMeal = sourceDay.meals
+      .filter((meal) => meal.day_meal_id !== mealToMove.day_meal_id)
+      .map((meal, idx) => ({ ...meal, order_index: idx }))
+
+    const targetWithMeal = [...targetDay.meals]
+    targetWithMeal.splice(targetIndex, 0, { ...mealToMove, order_index: targetIndex })
+    const normalizedTarget = targetWithMeal.map((meal, idx) => ({ ...meal, order_index: idx }))
+
+    updateDayMeals(sourceDay.id, () => sourceWithoutMeal)
+    updateDayMeals(targetDay.id, () => normalizedTarget)
+
+    try {
+      await supabase
+        .from('meal_plan_day_meals')
+        .update({ meal_plan_day_id: targetDay.id })
+        .eq('id', mealToMove.day_meal_id)
+
+      const updates = [
+        ...sourceWithoutMeal.map((meal) => ({ id: meal.day_meal_id, order_index: meal.order_index })),
+        ...normalizedTarget.map((meal) => ({ id: meal.day_meal_id, order_index: meal.order_index })),
+      ]
 
       for (const update of updates) {
         await supabase
@@ -533,9 +611,10 @@ function MealPlanContent() {
 
       refetch()
     } catch (error) {
-      updateDayMeals(dayId, () => previousMeals)
-      console.error('Error reordering meals:', error)
-      alert('Failed to reorder meals')
+      updateDayMeals(sourceDay.id, () => previousSource)
+      updateDayMeals(targetDay.id, () => previousTarget)
+      console.error('Error moving meal between days:', error)
+      alert('Failed to move meal')
     }
   }
 
@@ -709,7 +788,12 @@ function MealPlanContent() {
       <Navbar />
       <div className="container mx-auto px-4 py-8 max-w-7xl flex-1 space-y-6 print-area">
         {isEditMode ? (
-          <>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <>
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-8">
               {isEditingTitle ? (
                 titleEditor
@@ -872,53 +956,49 @@ function MealPlanContent() {
                       </div>
                     </CardHeader>
                     <CardContent className="p-4">
-                      {day.meals.length === 0 ? (
-                        <div className="py-8 text-center">
-                          <p className="text-gray-400 mb-3">No meals yet</p>
-                          {isEditMode && (
-                            <>
-                              <p className="hidden lg:block text-xs text-gray-500">Drag meals from the library →</p>
-                              <Button variant="outline" size="sm" onClick={() => openMealSelector(day.id)} className="lg:hidden">
-                                <Plus className="h-3 w-3 mr-1" />
-                                Add Meal
-                              </Button>
-                            </>
-                          )}
-                        </div>
-                      ) : (
-                        <div className="space-y-3">
-                          <DndContext
-                            sensors={sensors}
-                            collisionDetection={closestCenter}
-                            onDragEnd={(event) => handleDragEnd(day.id, event)}
-                          >
-                            <SortableContext
-                              items={day.meals.map(m => m.day_meal_id)}
-                              strategy={verticalListSortingStrategy}
-                            >
-                              {day.meals.map((meal) => (
-                                <SortableMealRow
-                                  key={meal.day_meal_id}
-                                  meal={meal}
-                                  isEditMode={isEditMode}
-                                  onVideoClick={() => setSelectedVideo({ url: meal.video_url!, title: meal.name, meal })}
-                                  onDelete={() => handleRemoveMealFromDay(meal.day_meal_id)}
-                                />
-                              ))}
-                            </SortableContext>
-                          </DndContext>
-                          {isEditMode && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-full mt-2 lg:hidden"
-                              onClick={() => openMealSelector(day.id)}
-                            >
-                              <Plus className="h-3 w-3 mr-1" />
-                              Add More
-                            </Button>
-                          )}
-                        </div>
+                      <SortableContext
+                        id={day.id}
+                        items={day.meals.map(m => m.day_meal_id)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {day.meals.length === 0 ? (
+                          <div className="py-8 text-center">
+                            <p className="text-gray-400 mb-3">No meals yet</p>
+                            {isEditMode && (
+                              <>
+                                <p className="hidden lg:block text-xs text-gray-500">Drag meals from the library →</p>
+                                <Button variant="outline" size="sm" onClick={() => openMealSelector(day.id)} className="lg:hidden">
+                                  <Plus className="h-3 w-3 mr-1" />
+                                  Add Meal
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            {day.meals.map((meal) => (
+                              <SortableMealRow
+                                key={meal.day_meal_id}
+                                dayId={day.id}
+                                meal={meal}
+                                isEditMode={isEditMode}
+                                onVideoClick={() => setSelectedVideo({ url: meal.video_url!, title: meal.name, meal })}
+                                onDelete={() => handleRemoveMealFromDay(meal.day_meal_id)}
+                              />
+                            ))}
+                          </div>
+                        )}
+                      </SortableContext>
+                      {isEditMode && day.meals.length > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full mt-2 lg:hidden"
+                          onClick={() => openMealSelector(day.id)}
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Add More
+                        </Button>
                       )}
                     </CardContent>
                       </Card>
@@ -1056,47 +1136,45 @@ function MealPlanContent() {
                             </div>
                           </CardHeader>
                           <CardContent className="p-4">
-                            {day.meals.length === 0 ? (
-                              <div className="py-8 text-center">
-                                <p className="text-gray-400 mb-3">No meals yet</p>
-                                <p className="hidden lg:block text-xs text-gray-500">Drag meals from the library →</p>
-                                <Button variant="outline" size="sm" onClick={() => openMealSelector(day.id)} className="lg:hidden">
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  Add Meal
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="space-y-3 opacity-60">
-                                <DndContext
-                                  sensors={sensors}
-                                  collisionDetection={closestCenter}
-                                  onDragEnd={(event) => handleDragEnd(day.id, event)}
-                                >
-                                  <SortableContext
-                                    items={day.meals.map(m => m.day_meal_id)}
-                                    strategy={verticalListSortingStrategy}
-                                  >
-                                    {day.meals.map((meal) => (
-                                      <SortableMealRow
-                                        key={meal.day_meal_id}
-                                        meal={meal}
-                                        isEditMode={true}
-                                        onVideoClick={() => setSelectedVideo({ url: meal.video_url!, title: meal.name, meal })}
-                                        onDelete={() => handleRemoveMealFromDay(meal.day_meal_id)}
-                                      />
-                                    ))}
-                                  </SortableContext>
-                                </DndContext>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="w-full mt-2 lg:hidden"
-                                  onClick={() => openMealSelector(day.id)}
-                                >
-                                  <Plus className="h-3 w-3 mr-1" />
-                                  Add More
-                                </Button>
-                              </div>
+                            <SortableContext
+                              id={day.id}
+                              items={day.meals.map(m => m.day_meal_id)}
+                              strategy={verticalListSortingStrategy}
+                            >
+                              {day.meals.length === 0 ? (
+                                <div className="py-8 text-center">
+                                  <p className="text-gray-400 mb-3">No meals yet</p>
+                                  <p className="hidden lg:block text-xs text-gray-500">Drag meals from the library →</p>
+                                  <Button variant="outline" size="sm" onClick={() => openMealSelector(day.id)} className="lg:hidden">
+                                    <Plus className="h-3 w-3 mr-1" />
+                                    Add Meal
+                                  </Button>
+                                </div>
+                              ) : (
+                                <div className="space-y-3 opacity-60">
+                                  {day.meals.map((meal) => (
+                                    <SortableMealRow
+                                      key={meal.day_meal_id}
+                                      dayId={day.id}
+                                      meal={meal}
+                                      isEditMode={true}
+                                      onVideoClick={() => setSelectedVideo({ url: meal.video_url!, title: meal.name, meal })}
+                                      onDelete={() => handleRemoveMealFromDay(meal.day_meal_id)}
+                                    />
+                                  ))}
+                                </div>
+                              )}
+                            </SortableContext>
+                            {day.meals.length > 0 && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-full mt-2 lg:hidden"
+                                onClick={() => openMealSelector(day.id)}
+                              >
+                                <Plus className="h-3 w-3 mr-1" />
+                                Add More
+                              </Button>
                             )}
                           </CardContent>
                         </Card>
@@ -1106,7 +1184,8 @@ function MealPlanContent() {
                 )}
               </>
             )}
-          </>
+            </>
+          </DndContext>
         ) : (
           <>
             {isEditingTitle ? (
