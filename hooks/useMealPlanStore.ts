@@ -250,8 +250,7 @@ export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: str
     return () => {
       isMountedRef.current = false
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [fetchPlan])
 
   const refetch = useCallback(async () => {
     await fetchPlan(initialLoadRef.current)

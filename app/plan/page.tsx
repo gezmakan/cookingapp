@@ -1,7 +1,7 @@
 'use client'
 
 import { Suspense, useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useMealPlanStore } from '@/hooks/useMealPlanStore'
 import { Button } from '@/components/ui/button'
@@ -114,6 +114,7 @@ function SortableMealRow({
 function MealPlanContent() {
   const supabase = createClient()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const requestedPlanId = searchParams.get('id')
 
   const { days, isLoading, error, refetch, updateDayMeals, planId, planName, planSubtitle, canEdit } = useMealPlanStore(supabase, requestedPlanId)
@@ -150,6 +151,12 @@ function MealPlanContent() {
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTitleValue, setEditTitleValue] = useState('')
   const [editSubtitleValue, setEditSubtitleValue] = useState('')
+  const [ownedPlans, setOwnedPlans] = useState<{ id: string; name: string }[]>([])
+  const [sharedPlans, setSharedPlans] = useState<{ id: string; name: string }[]>([])
+  const [defaultPlanId, setDefaultPlanId] = useState<string | null>(null)
+  const [isLoadingPlans, setIsLoadingPlans] = useState(false)
+  const [isSettingDefault, setIsSettingDefault] = useState(false)
+  const [planSwitcherValue, setPlanSwitcherValue] = useState('')
 
   // Update menu title when plan name loads
   useEffect(() => {
@@ -162,6 +169,67 @@ function MealPlanContent() {
   useEffect(() => {
     setMenuSubtitle(planSubtitle ?? 'Plan your weekly meals')
   }, [planSubtitle])
+  useEffect(() => {
+    const loadUserPlans = async () => {
+      setIsLoadingPlans(true)
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          setOwnedPlans([])
+          setSharedPlans([])
+          setDefaultPlanId(null)
+          return
+        }
+
+        const [plansResult, prefsResult, sharedResult] = await Promise.all([
+          supabase
+            .from('meal_plans')
+            .select('id, name')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: true }),
+          supabase
+            .from('user_preferences')
+            .select('default_plan_id')
+            .eq('user_id', user.id)
+            .single(),
+          supabase
+            .from('plan_shares')
+            .select('plan_id, meal_plans ( id, name )')
+            .eq('shared_with_email', user.email)
+        ])
+
+        if (!plansResult.error && plansResult.data) {
+          setOwnedPlans(plansResult.data)
+        } else if (plansResult.error) {
+          console.error('Error loading user plans:', plansResult.error)
+        }
+
+        if (!sharedResult.error && sharedResult.data) {
+          const validShared = sharedResult.data
+            .map((share) => {
+              if (!share.meal_plans) return null
+              return { id: share.meal_plans.id, name: share.meal_plans.name }
+            })
+            .filter((plan): plan is { id: string; name: string } => !!plan)
+          setSharedPlans(validShared)
+        } else if (sharedResult.error) {
+          console.error('Error loading shared plans for switcher:', sharedResult.error)
+        }
+
+        if (!prefsResult.error && prefsResult.data) {
+          setDefaultPlanId(prefsResult.data.default_plan_id)
+        } else if (prefsResult.error && prefsResult.error.code !== 'PGRST116') {
+          console.error('Error loading preferences:', prefsResult.error)
+        }
+      } catch (err) {
+        console.error('Error fetching plans for switcher:', err)
+      } finally {
+        setIsLoadingPlans(false)
+      }
+    }
+
+    loadUserPlans()
+  }, [supabase])
 
   const activeDays = (days || []).filter((day) => day.is_active)
   const inactiveDays = (days || []).filter((day) => !day.is_active)
@@ -182,6 +250,15 @@ function MealPlanContent() {
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false)
   const ingredientStatus = useIngredientStatus(supabase, planId)
   const handleExportPlan = () => window.print()
+  const planOptions = (() => {
+    const map = new Map<string, string>()
+    ownedPlans.forEach((plan) => map.set(plan.id, plan.name))
+    sharedPlans.forEach((plan) => map.set(plan.id, plan.name))
+    if (planId && !map.has(planId)) {
+      map.set(planId, menuTitle || 'Current Plan')
+    }
+    return Array.from(map.entries()).map(([id, name]) => ({ id, name }))
+  })()
 
   const handleSaveTitleSubtitle = async () => {
     try {
@@ -288,6 +365,38 @@ function MealPlanContent() {
     setEditTitleValue(menuTitle)
     setEditSubtitleValue(menuSubtitle)
     setIsEditingTitle(true)
+  }
+  const handlePlanSelect = (selectedId: string) => {
+    if (!selectedId || selectedId === planId) return
+    router.push(`/plan?id=${selectedId}`)
+    router.refresh()
+  }
+
+  const handleSetDefaultPlan = async () => {
+    if (!planId) return
+    setIsSettingDefault(true)
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) throw new Error('Not authenticated')
+
+      const { error } = await supabase
+        .from('user_preferences')
+        .upsert(
+          {
+            user_id: user.id,
+            default_plan_id: planId,
+          },
+          { onConflict: 'user_id' }
+        )
+
+      if (error) throw error
+      setDefaultPlanId(planId)
+    } catch (err) {
+      console.error('Error setting default plan from builder:', err)
+      alert('Failed to set default plan')
+    } finally {
+      setIsSettingDefault(false)
+    }
   }
 
   const handleAddDay = async () => {
@@ -599,24 +708,61 @@ function MealPlanContent() {
       <div className="container mx-auto px-4 py-8 max-w-7xl flex-1 space-y-6 print-area">
         {isEditMode ? (
           <>
-            <div className="flex items-center justify-between mb-8">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between mb-8">
               {isEditingTitle ? (
                 titleEditor
               ) : (
                 <div className="group cursor-pointer" onClick={handleStartEditingTitle}>
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-3xl font-bold text-gray-900">{menuTitle}</h1>
-                    <Edit2 className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                      <h1 className="text-3xl font-bold text-gray-900">{menuTitle}</h1>
+                      <Edit2 className="h-5 w-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    {menuSubtitle && <p className="text-gray-600">{menuSubtitle}</p>}
                   </div>
-                  {menuSubtitle && <p className="text-gray-600 mt-1">{menuSubtitle}</p>}
                 </div>
               )}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-col gap-3 items-start lg:items-end w-full lg:w-auto">
+                {planOptions.length > 0 && (
+                  <div className="grid grid-cols-2 gap-2 w-full lg:w-96">
+                    <select
+                      value={planSwitcherValue}
+                      onChange={(e) => {
+                        const selectedId = e.target.value
+                        setPlanSwitcherValue('')
+                        handlePlanSelect(selectedId)
+                      }}
+                      disabled={isLoadingPlans}
+                      className="col-span-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-300 text-gray-900"
+                    >
+                      <option value="" disabled>
+                        Switch plan
+                      </option>
+                      {planOptions.map((plan) => (
+                        <option key={plan.id} value={plan.id}>
+                          {plan.name}
+                        </option>
+                      ))}
+                    </select>
+                    {canEdit && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSetDefaultPlan}
+                        disabled={!planId || defaultPlanId === planId || isSettingDefault}
+                        className="col-span-1"
+                      >
+                        {defaultPlanId === planId ? 'Default plan' : isSettingDefault ? 'Saving...' : 'Make default'}
+                      </Button>
+                    )}
+                  </div>
+                )}
                 {canEdit && (
                   <Button
-                    variant={isEditMode ? "default" : "outline"}
+                    variant={isEditMode ? 'default' : 'outline'}
+                    size="sm"
                     onClick={() => setIsEditMode(!isEditMode)}
-                    className={isEditMode ? "bg-orange-600 hover:bg-orange-700" : ""}
+                    className={`${isEditMode ? 'bg-orange-600 hover:bg-orange-700 text-white' : ''} w-full lg:w-auto`}
                   >
                     <Edit2 className="h-4 w-4 mr-2" />
                     {isEditMode ? 'Done' : 'Edit'}
