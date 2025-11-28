@@ -56,8 +56,8 @@ export default function LoginForm({ initialMode = 'login' }: LoginFormProps) {
         })
         if (signInError) throw signInError
 
-        setSuccess('Account created! Redirecting you to your meal library...')
-        router.push('/meals')
+        setSuccess('Account created! Redirecting you to your meal planner...')
+        router.push('/plan')
         router.refresh()
       } else {
         const { error } = await supabase.auth.signInWithPassword({
@@ -65,7 +65,7 @@ export default function LoginForm({ initialMode = 'login' }: LoginFormProps) {
           password,
         })
         if (error) throw error
-        router.push('/meals')
+        router.push('/plan')
         router.refresh()
       }
     } catch (error: any) {
@@ -115,7 +115,7 @@ export default function LoginForm({ initialMode = 'login' }: LoginFormProps) {
       setLinkPassword('')
 
       setTimeout(() => {
-        router.push('/meals')
+        router.push('/plan')
         router.refresh()
       }, 1000)
     } catch (error: any) {
@@ -204,7 +204,7 @@ export default function LoginForm({ initialMode = 'login' }: LoginFormProps) {
         }
 
         setSuccess('Signed in with Google! Redirecting...')
-        router.push('/meals')
+        router.push('/plan')
         router.refresh()
       } catch (error: any) {
         setError(error.message || 'Failed to sign in with Google')
@@ -423,5 +423,4 @@ export default function LoginForm({ initialMode = 'login' }: LoginFormProps) {
     </div>
   )
 }
-
 

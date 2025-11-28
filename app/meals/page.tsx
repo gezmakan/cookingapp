@@ -275,16 +275,18 @@ export default function MealsPage() {
           <>
             <div className="bg-white md:rounded-lg border-y md:border -mx-4 md:mx-0 px-4 py-3 mb-4 flex items-center justify-between gap-3 overflow-x-auto">
               <div className="flex items-center gap-2 min-w-0 flex-wrap">
-                <button
-                  onClick={() => handleSelectCuisine(null)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap ${
-                    selectedCuisine === null
-                      ? 'bg-orange-500 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  All
-                </button>
+                {user && (
+                  <button
+                    onClick={handleToggleMineOnly}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap border ${
+                      showMineOnly
+                        ? 'bg-orange-500 text-white border-orange-500'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:text-orange-600'
+                    }`}
+                  >
+                    My Recipes
+                  </button>
+                )}
                 {uniqueCuisineTypes.map(cuisine => (
                   <button
                     key={cuisine}
@@ -298,18 +300,6 @@ export default function MealsPage() {
                     {cuisine}
                   </button>
                 ))}
-                {user && (
-                  <button
-                    onClick={handleToggleMineOnly}
-                    className={`px-3 py-1 rounded-full text-xs font-medium transition-colors whitespace-nowrap border ${
-                      showMineOnly
-                        ? 'bg-orange-500 text-white border-orange-500'
-                        : 'bg-white text-gray-700 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-                    }`}
-                  >
-                    My Recipes
-                  </button>
-                )}
               </div>
             </div>
 

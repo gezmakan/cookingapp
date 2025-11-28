@@ -72,18 +72,25 @@ export default function VideoModal({ isOpen, onClose, videoUrl, title, meal }: V
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
 
-        <div className={`flex flex-col ${meal && (meal.ingredients || meal.instructions) ? 'md:flex-row md:gap-6' : ''} flex-1 overflow-hidden`}>
+        <div className={`flex flex-col ${meal && (meal.ingredients || meal.instructions) ? 'md:flex-row md:gap-6' : ''} flex-1`}>
           <div
-            className={`flex-shrink-0 ${platform === 'tiktok' ? 'w-full max-w-sm mx-auto' : 'w-full'} ${meal && (meal.ingredients || meal.instructions) ? 'md:basis-1/2 lg:basis-[52%]' : ''}`}
-            style={{ aspectRatio: platform === 'tiktok' ? '9/16' : '16/9' }}
+            className={`flex-shrink-0 w-full ${platform === 'tiktok' ? 'max-w-xs mx-auto' : 'max-w-4xl mx-auto'} ${meal && (meal.ingredients || meal.instructions) ? 'md:basis-1/2 lg:basis-[52%]' : ''}`}
           >
-            <iframe
-              src={embedUrl}
-              title={title}
-              className="w-full h-full rounded"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-            />
+            <div
+              className="relative w-full rounded overflow-hidden"
+              style={{
+                aspectRatio: platform === 'tiktok' ? '9/16' : '16/9',
+                maxHeight: platform === 'tiktok' ? '70vh' : '50vh',
+              }}
+            >
+              <iframe
+                src={embedUrl}
+                title={title}
+                className="absolute inset-0 w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
           </div>
 
           {meal && (meal.ingredients || meal.instructions) && (

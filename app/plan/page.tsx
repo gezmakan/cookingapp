@@ -1125,13 +1125,6 @@ function MealPlanContent() {
                   <div className="flex flex-wrap gap-3 print:hidden mt-2 lg:mt-0">
                     <Button
                       className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
-                      onClick={() => setIsEditMode(true)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                      Edit Plan
-                    </Button>
-                    <Button
-                      className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
                       onClick={() => setIsShoppingListOpen(true)}
                     >
                       Shopping List
@@ -1234,6 +1227,15 @@ function MealPlanContent() {
                 </div>
               </div>
             )}
+            <div className="print:hidden flex justify-center mt-10">
+              <Button
+                className="bg-gradient-to-r from-orange-500 to-rose-500 text-white shadow-lg hover:from-orange-600 hover:to-rose-600 border-0"
+                onClick={() => setIsEditMode(true)}
+              >
+                <Edit2 className="h-4 w-4 mr-2" />
+                Edit Plan
+              </Button>
+            </div>
           </>
         )}
       </div>
