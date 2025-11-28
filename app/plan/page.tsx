@@ -87,12 +87,12 @@ function SortableMealRow({
           }
         }}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <h4 className={`font-medium text-gray-900 truncate ${meal.video_url && !isEditMode ? 'hover:text-orange-600 transition-colors' : ''}`} title={meal.name}>
+        <div className="flex items-start gap-2 min-w-0">
+          <h4 className={`font-medium text-gray-900 line-clamp-2 ${meal.video_url && !isEditMode ? 'hover:text-orange-600 transition-colors' : ''}`} title={meal.name}>
             {meal.name}
           </h4>
           {!isEditMode && meal.video_url && (
-            <Video className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" />
+            <Video className="h-3.5 w-3.5 text-orange-600 flex-shrink-0 mt-0.5" />
           )}
         </div>
       </div>
@@ -1034,8 +1034,8 @@ export default function MealPlanPage() {
                             day.meals.map((meal) => (
                               <div
                                 key={meal.day_meal_id}
-                                  className={`rounded-2xl border border-transparent bg-gray-50/90 px-4 py-3 transition-all ${
-                                    meal.video_url ? 'cursor-pointer hover:border-orange-200 hover:bg-white' : ''
+                                  className={`rounded-2xl border border-transparent bg-gray-50/90 px-3 py-3 transition-all ${
+                                    meal.video_url ? 'cursor-pointer hover:border-orange-200 hover:bg-gradient-to-br hover:from-orange-50/50 hover:to-rose-50/50' : ''
                                   }`}
                                   onClick={() => {
                                     if (meal.video_url) {
@@ -1043,9 +1043,9 @@ export default function MealPlanPage() {
                                     }
                                   }}
                                 >
-                                  <div className="flex items-center justify-between gap-4">
+                                  <div className="flex items-start justify-between gap-4">
                                     <div className="min-w-0">
-                                      <p className="font-medium text-gray-900 truncate">{meal.name}</p>
+                                      <p className="font-medium text-gray-900 line-clamp-2">{meal.name}</p>
                                     </div>
                                     {!meal.video_url && (
                                       <span className="text-xs text-gray-400">No video</span>
@@ -1201,10 +1201,10 @@ export default function MealPlanPage() {
 
                       {/* Meal Info */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-medium text-gray-900 truncate">{meal.name}</h4>
+                        <div className="flex items-start gap-2">
+                          <h4 className="font-medium text-gray-900 line-clamp-2">{meal.name}</h4>
                           {meal.video_url && (
-                            <Video className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" />
+                            <Video className="h-3.5 w-3.5 text-orange-600 flex-shrink-0 mt-0.5" />
                           )}
                         </div>
                       </div>
