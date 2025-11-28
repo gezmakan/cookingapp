@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { useMealPlanStore } from '@/hooks/useMealPlanStore'
@@ -111,7 +111,7 @@ function SortableMealRow({
   )
 }
 
-export default function MealPlanPage() {
+function MealPlanContent() {
   const supabase = createClient()
   const searchParams = useSearchParams()
   const requestedPlanId = searchParams.get('id')
@@ -1272,5 +1272,21 @@ export default function MealPlanPage() {
 
       <Footer />
     </div>
+  )
+}
+
+function PlanPageFallback() {
+  return (
+    <div className="flex min-h-[50vh] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-orange-600" />
+    </div>
+  )
+}
+
+export default function MealPlanPage() {
+  return (
+    <Suspense fallback={<PlanPageFallback />}>
+      <MealPlanContent />
+    </Suspense>
   )
 }
