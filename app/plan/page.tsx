@@ -87,12 +87,12 @@ function SortableMealRow({
           }
         }}
       >
-        <div className="flex items-center gap-2">
-          <h4 className={`font-medium text-gray-900 ${meal.video_url && !isEditMode ? 'hover:text-orange-600 transition-colors' : ''}`}>
+        <div className="flex items-center gap-2 min-w-0">
+          <h4 className={`font-medium text-gray-900 truncate ${meal.video_url && !isEditMode ? 'hover:text-orange-600 transition-colors' : ''}`} title={meal.name}>
             {meal.name}
           </h4>
           {!isEditMode && meal.video_url && (
-            <Video className="h-3.5 w-3.5 text-orange-600" />
+            <Video className="h-3.5 w-3.5 text-orange-600 flex-shrink-0" />
           )}
         </div>
       </div>
