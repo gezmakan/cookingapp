@@ -59,6 +59,16 @@ export default function Footer() {
             </Link>
           </div>
           <div className="flex items-center justify-center gap-6 flex-wrap mt-4">
+            {user && (
+              <Link
+                href="/settings"
+                className={`${
+                  pathname === '/settings' ? 'text-orange-600' : 'hover:text-orange-600'
+                }`}
+              >
+                Settings
+              </Link>
+            )}
             <Link
               href="/terms"
               className={`${

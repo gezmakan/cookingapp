@@ -130,7 +130,7 @@ export default function ShoppingListModal({
                         onCheckedChange={(val) => onToggleIngredient(ingredient.label, Boolean(val))}
                         className="shrink-0"
                       />
-                      <span className={`flex-1 break-words ${checked ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+                      <span className={`flex-1 wrap-break-word ${checked ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
                         {ingredient.label}
                       </span>
                       <span className="text-xs text-gray-400 shrink-0">

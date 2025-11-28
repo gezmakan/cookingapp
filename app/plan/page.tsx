@@ -112,9 +112,19 @@ function SortableMealRow({
 
 export default function MealPlanPage() {
   const supabase = createClient()
-  const { days, isLoading, error, refetch, updateDayMeals } = useMealPlanStore(supabase)
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
+  const requestedPlanId = searchParams.get('id')
+
+  const { days, isLoading, error, refetch, updateDayMeals, planId, planName, canEdit } = useMealPlanStore(supabase, requestedPlanId)
 
   const [isEditMode, setIsEditMode] = useState(false)
+
+  // Disable edit mode if user loses edit permission
+  useEffect(() => {
+    if (!canEdit && isEditMode) {
+      setIsEditMode(false)
+    }
+  }, [canEdit, isEditMode])
   const [isAddDayOpen, setIsAddDayOpen] = useState(false)
   const [dayName, setDayName] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -156,7 +166,7 @@ export default function MealPlanPage() {
   const currentWeekdayName = new Intl.DateTimeFormat('en-US', { weekday: 'long' }).format(new Date()).toLowerCase()
   const selectedDay = selectedDayId ? days?.find((day) => day.id === selectedDayId) : null
   const [isShoppingListOpen, setIsShoppingListOpen] = useState(false)
-  const ingredientStatus = useIngredientStatus(supabase)
+  const ingredientStatus = useIngredientStatus(supabase, planId)
   const handleExportPlan = () => window.print()
 
   const handleSaveTitleSubtitle = async () => {
@@ -608,14 +618,16 @@ export default function MealPlanPage() {
                 </div>
               )}
               <div className="flex items-center gap-3">
-                <Button
-                  variant={isEditMode ? "default" : "outline"}
-                  onClick={() => setIsEditMode(!isEditMode)}
-                  className={isEditMode ? "bg-orange-600 hover:bg-orange-700" : ""}
-                >
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  {isEditMode ? 'Done' : 'Edit'}
-                </Button>
+                {canEdit && (
+                  <Button
+                    variant={isEditMode ? "default" : "outline"}
+                    onClick={() => setIsEditMode(!isEditMode)}
+                    className={isEditMode ? "bg-orange-600 hover:bg-orange-700" : ""}
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    {isEditMode ? 'Done' : 'Edit'}
+                  </Button>
+                )}
               </div>
             </div>
 

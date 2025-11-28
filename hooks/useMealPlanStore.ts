@@ -15,24 +15,31 @@ type MealPlanState = {
   days: MealPlanDay[]
   isLoading: boolean
   error: string | null
+  planId: string | null
+  planName: string | null
+  canEdit: boolean
 }
 
 const DEFAULT_DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
 
-export function useMealPlanStore(supabase: SupabaseClient) {
+export function useMealPlanStore(supabase: SupabaseClient, requestedPlanId?: string | null) {
   const [state, setState] = useState<MealPlanState>({
     days: [],
     isLoading: true,
     error: null,
+    planId: null,
+    planName: null,
+    canEdit: false,
   })
 
   const isMountedRef = useRef(false)
   const initialLoadRef = useRef(true)
   const defaultDaysSeededRef = useRef(false)
 
-  const seedDefaultDays = useCallback(async (userId: string) => {
+  const seedDefaultDays = useCallback(async (userId: string, planId: string) => {
     const rows = DEFAULT_DAY_NAMES.map((name, idx) => ({
       user_id: userId,
+      plan_id: planId,
       day_name: name,
       order_index: idx,
       is_active: true,
@@ -54,6 +61,7 @@ export function useMealPlanStore(supabase: SupabaseClient) {
       if (sessionError) throw sessionError
 
       const userId = session?.user?.id
+      const userEmail = session?.user?.email
 
       if (!userId) {
         if (isMountedRef.current) {
@@ -61,6 +69,9 @@ export function useMealPlanStore(supabase: SupabaseClient) {
             days: [],
             isLoading: false,
             error: null,
+            planId: null,
+            planName: null,
+            canEdit: false,
           })
         }
         initialLoadRef.current = false
@@ -68,10 +79,82 @@ export function useMealPlanStore(supabase: SupabaseClient) {
         return
       }
 
+      let planId = requestedPlanId
+      let canEdit = false
+      let planName = ''
+
+      // If no specific plan requested, load the default plan
+      if (!planId) {
+        const { data: prefs } = await supabase
+          .from('user_preferences')
+          .select('default_plan_id')
+          .eq('user_id', userId)
+          .single()
+
+        planId = prefs?.default_plan_id || null
+
+        // If no default plan set, get the user's first plan
+        if (!planId) {
+          const { data: plans } = await supabase
+            .from('meal_plans')
+            .select('id')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: true })
+            .limit(1)
+
+          planId = plans?.[0]?.id || null
+        }
+      }
+
+      if (!planId) {
+        if (isMountedRef.current) {
+          setState({
+            days: [],
+            isLoading: false,
+            error: 'No meal plan found',
+            planId: null,
+            planName: null,
+            canEdit: false,
+          })
+        }
+        initialLoadRef.current = false
+        return
+      }
+
+      // Load the plan details
+      const { data: plan, error: planError } = await supabase
+        .from('meal_plans')
+        .select('id, name, user_id, is_public')
+        .eq('id', planId)
+        .single()
+
+      if (planError) throw planError
+      if (!plan) {
+        throw new Error('Plan not found')
+      }
+
+      planName = plan.name
+
+      // Determine if user can edit
+      if (plan.user_id === userId) {
+        canEdit = true
+      } else if (userEmail) {
+        // Check if plan is shared with edit permission
+        const { data: share } = await supabase
+          .from('plan_shares')
+          .select('permission')
+          .eq('plan_id', planId)
+          .eq('shared_with_email', userEmail)
+          .single()
+
+        canEdit = share?.permission === 'edit'
+      }
+
+      // Load days for this plan
       const { data: days, error: daysError } = await supabase
         .from('meal_plan_days')
         .select('*')
-        .eq('user_id', userId)
+        .eq('plan_id', planId)
         .order('order_index', { ascending: true })
 
       if (daysError) throw daysError
@@ -79,16 +162,7 @@ export function useMealPlanStore(supabase: SupabaseClient) {
       const dayIds = (days ?? []).map((day) => day.id)
       let dayMeals: DayMealRecord[] = []
 
-      if ((days ?? []).length === 0 && !defaultDaysSeededRef.current) {
-        try {
-          defaultDaysSeededRef.current = true
-          await seedDefaultDays(userId)
-          await fetchPlan(showLoading)
-          return
-        } catch (seedError) {
-          console.error('Error seeding default meal plan days:', seedError)
-        }
-      }
+      // Note: We don't seed days here anymore - they're created by the trigger
 
       if (dayIds.length > 0) {
         const { data: dayMealsData, error: dayMealsError } = await supabase
@@ -139,6 +213,9 @@ export function useMealPlanStore(supabase: SupabaseClient) {
           days: daysWithMeals,
           isLoading: false,
           error: null,
+          planId: planId,
+          planName: planName,
+          canEdit: canEdit,
         })
       }
     } catch (error) {
@@ -148,12 +225,15 @@ export function useMealPlanStore(supabase: SupabaseClient) {
           days: [],
           isLoading: false,
           error: error instanceof Error ? error.message : 'Failed to load meal plan',
+          planId: null,
+          planName: null,
+          canEdit: false,
         })
       }
     } finally {
       initialLoadRef.current = false
     }
-  }, [supabase, seedDefaultDays])
+  }, [supabase, seedDefaultDays, requestedPlanId])
 
   useEffect(() => {
     isMountedRef.current = true

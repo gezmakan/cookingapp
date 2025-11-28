@@ -7,7 +7,7 @@ export type IngredientStatusMap = Record<string, boolean>
 
 export const normalizeIngredient = (value: string) => value.trim().toLowerCase()
 
-export function useIngredientStatus(supabase: SupabaseClient) {
+export function useIngredientStatus(supabase: SupabaseClient, planId: string | null) {
   const [statusMap, setStatusMap] = useState<IngredientStatusMap>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -17,7 +17,7 @@ export function useIngredientStatus(supabase: SupabaseClient) {
     setError(null)
     try {
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
+      if (!user || !planId) {
         setStatusMap({})
         setIsLoading(false)
         return
@@ -26,7 +26,7 @@ export function useIngredientStatus(supabase: SupabaseClient) {
       const { data, error } = await supabase
         .from('user_ingredient_status')
         .select('ingredient, has_item')
-        .eq('user_id', user.id)
+        .eq('plan_id', planId)
 
       if (error) throw error
 
@@ -43,7 +43,7 @@ export function useIngredientStatus(supabase: SupabaseClient) {
     } finally {
       setIsLoading(false)
     }
-  }, [supabase])
+  }, [supabase, planId])
 
   const setIngredientStatus = useCallback(
     async (ingredient: string, hasItem: boolean) => {
@@ -60,17 +60,18 @@ export function useIngredientStatus(supabase: SupabaseClient) {
       try {
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) throw new Error('Not authenticated')
+        if (!planId) throw new Error('No plan selected')
 
         const { error } = await supabase
           .from('user_ingredient_status')
           .upsert(
             {
-              user_id: user.id,
+              plan_id: planId,
               ingredient: normalized,
               has_item: hasItem,
               updated_at: new Date().toISOString(),
             },
-            { onConflict: 'user_id, ingredient' }
+            { onConflict: 'plan_id, ingredient' }
           )
 
         if (error) throw error
@@ -85,18 +86,19 @@ export function useIngredientStatus(supabase: SupabaseClient) {
         throw err
       }
     },
-    [supabase, statusMap]
+    [supabase, statusMap, planId]
   )
 
   const resetStatuses = useCallback(async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error('Not authenticated')
+      if (!planId) throw new Error('No plan selected')
 
       const { error } = await supabase
         .from('user_ingredient_status')
         .delete()
-        .eq('user_id', user.id)
+        .eq('plan_id', planId)
 
       if (error) throw error
       setStatusMap({})
@@ -105,7 +107,7 @@ export function useIngredientStatus(supabase: SupabaseClient) {
       setError(err instanceof Error ? err.message : 'Failed to reset ingredient status')
       throw err
     }
-  }, [supabase])
+  }, [supabase, planId])
 
   useEffect(() => {
     fetchStatuses()
