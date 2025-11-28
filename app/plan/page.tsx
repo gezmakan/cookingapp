@@ -404,7 +404,12 @@ function MealPlanContent() {
   }
 
   const handleAddDay = async () => {
-    if (!dayName.trim()) return
+    const trimmedName = dayName.trim()
+    if (!trimmedName || !planId) return
+    if (trimmedName.length > 40) {
+      alert('Day name must be 40 characters or fewer')
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -417,7 +422,8 @@ function MealPlanContent() {
         .from('meal_plan_days')
         .insert({
           user_id: user.id,
-          day_name: dayName.trim(),
+          plan_id: planId,
+          day_name: trimmedName,
           order_index: maxOrder + 1,
         })
 
@@ -477,6 +483,10 @@ function MealPlanContent() {
     const trimmed = editingDayName.trim()
     if (!trimmed) {
       alert('Day name cannot be empty')
+      return
+    }
+    if (trimmed.length > 40) {
+      alert('Day name must be 40 characters or fewer')
       return
     }
 
@@ -914,11 +924,12 @@ function MealPlanContent() {
                               }
                             }}
                             className="text-xl font-semibold h-9 max-w-xs"
+                            maxLength={40}
                             autoFocus
                           />
                         ) : (
                           <CardTitle
-                            className={`text-xl font-quicksand ${isEditMode ? 'cursor-pointer hover:opacity-70 transition-opacity' : ''}`}
+                            className={`inline-flex items-center rounded-full bg-orange-50 px-3 py-1.5 text-sm font-semibold tracking-[0.25em] uppercase text-orange-900 ${isEditMode ? 'cursor-pointer hover:bg-orange-100 transition-colors' : ''}`}
                             onClick={() => isEditMode && handleStartEditingDayName(day.id, day.day_name)}
                             title={isEditMode ? 'Click to edit' : ''}
                           >
@@ -1095,11 +1106,12 @@ function MealPlanContent() {
                                     }
                                   }}
                                   className="text-xl font-semibold h-9 max-w-xs"
+                                  maxLength={40}
                                   autoFocus
                                 />
                               ) : (
                                 <CardTitle
-                                  className="text-xl text-gray-600 font-quicksand cursor-pointer hover:opacity-70 transition-opacity"
+                                  className="inline-flex items-center rounded-full bg-orange-50 px-3 py-1.5 text-sm font-semibold tracking-[0.25em] uppercase text-orange-900 cursor-pointer hover:bg-orange-100 transition-colors"
                                   onClick={() => handleStartEditingDayName(day.id, day.day_name)}
                                   title="Click to edit"
                                 >
@@ -1241,7 +1253,9 @@ function MealPlanContent() {
                         <div className="relative p-6 space-y-5">
                           <div className="flex items-start justify-between">
                             <div>
-                              <h3 className="text-2xl font-semibold text-gray-900 font-quicksand">{day.day_name}</h3>
+                              <h3 className="inline-flex items-center rounded-full bg-orange-50 px-3 py-1.5 text-sm font-semibold tracking-[0.25em] uppercase text-orange-900 font-quicksand">
+                                {day.day_name}
+                              </h3>
                             </div>
                             {isToday && (
                               <span className="rounded-full bg-amber-100 text-amber-700 px-3 py-1 text-xs font-semibold">
@@ -1363,6 +1377,7 @@ function MealPlanContent() {
                   handleAddDay()
                 }
               }}
+              maxLength={40}
             />
           </div>
           <DialogFooter>
