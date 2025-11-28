@@ -6,8 +6,9 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Switch } from '@/components/ui/switch'
 import { createClient } from '@/lib/supabase/client'
-import { X, Share2 } from 'lucide-react'
+import { X, Share2, Copy, Check } from 'lucide-react'
 
 type PlanShare = {
   id: string
@@ -21,15 +22,22 @@ type SharePlanModalProps = {
   onClose: () => void
   planId: string
   planName: string
+  planIsPublic: boolean
+  planShareToken: string | null
+  onVisibilityChange: (payload: { isPublic: boolean; shareToken: string | null }) => void
 }
 
-export default function SharePlanModal({ isOpen, onClose, planId, planName }: SharePlanModalProps) {
+export default function SharePlanModal({ isOpen, onClose, planId, planName, planIsPublic, planShareToken, onVisibilityChange }: SharePlanModalProps) {
   const supabase = createClient()
   const [email, setEmail] = useState('')
   const [permission, setPermission] = useState<'view' | 'edit'>('view')
   const [shares, setShares] = useState<PlanShare[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingShares, setLoadingShares] = useState(false)
+  const [isPublic, setIsPublic] = useState(planIsPublic)
+  const [shareToken, setShareToken] = useState<string | null>(planShareToken)
+  const [togglingPublic, setTogglingPublic] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   // Load existing shares when modal opens
   useEffect(() => {
@@ -37,6 +45,12 @@ export default function SharePlanModal({ isOpen, onClose, planId, planName }: Sh
       loadShares()
     }
   }, [isOpen])
+
+  useEffect(() => {
+    setIsPublic(planIsPublic)
+    setShareToken(planShareToken)
+    setCopied(false)
+  }, [planIsPublic, planShareToken, isOpen])
 
   const loadShares = async () => {
     setLoadingShares(true)
@@ -117,6 +131,52 @@ export default function SharePlanModal({ isOpen, onClose, planId, planName }: Sh
     }
   }
 
+  const generateShareToken = () => {
+    const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+    return Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+  }
+
+  const handleTogglePublic = async () => {
+    const nextIsPublic = !isPublic
+    let nextShareToken = shareToken
+
+    if (nextIsPublic && !nextShareToken) {
+      nextShareToken = generateShareToken()
+    }
+
+    setTogglingPublic(true)
+    try {
+      const { error } = await supabase
+        .from('meal_plans')
+        .update({
+          is_public: nextIsPublic,
+          share_token: nextShareToken,
+        })
+        .eq('id', planId)
+
+      if (error) throw error
+
+      setIsPublic(nextIsPublic)
+      setShareToken(nextShareToken)
+      setCopied(false)
+      onVisibilityChange({ isPublic: nextIsPublic, shareToken: nextShareToken || null })
+    } catch (err) {
+      console.error('Error updating public status:', err)
+      alert('Failed to update public status')
+    } finally {
+      setTogglingPublic(false)
+    }
+  }
+
+  const handleCopyLink = () => {
+    if (!shareToken) return
+    const origin = typeof window !== 'undefined' ? window.location.origin : ''
+    const url = origin ? `${origin}/plan/share/${shareToken}` : `/plan/share/${shareToken}`
+    navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[500px]">
@@ -128,6 +188,35 @@ export default function SharePlanModal({ isOpen, onClose, planId, planName }: Sh
         </DialogHeader>
 
         <div className="space-y-6">
+          {/* Public Access */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Public link</p>
+                <p className="text-sm text-gray-500">Allow anyone with the link to view this plan.</p>
+              </div>
+              <Switch checked={isPublic} onCheckedChange={() => handleTogglePublic()} disabled={togglingPublic} />
+            </div>
+            {isPublic && shareToken && (
+              <div className="flex flex-wrap items-center gap-2 text-sm">
+                <div className="flex-1 min-w-[200px]">
+                  <Input value={`/plan/share/${shareToken}`} readOnly className="font-mono text-xs" />
+                </div>
+                <Button variant="outline" size="sm" onClick={handleCopyLink}>
+                  {copied ? (
+                    <>
+                      <Check className="h-4 w-4 mr-1" /> Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="h-4 w-4 mr-1" /> Copy link
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
+          </div>
+
           {/* Share Form */}
           <div className="space-y-4">
             <div>

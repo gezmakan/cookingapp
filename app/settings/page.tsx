@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Switch } from '@/components/ui/switch'
-import { ArrowLeft, Star, Plus, Trash2, Share2, Copy, Check } from 'lucide-react'
+import { ArrowLeft, Star, Plus, Trash2, Share2 } from 'lucide-react'
 import { User } from '@supabase/supabase-js'
 import SharePlanModal from '@/components/SharePlanModal'
 
@@ -49,8 +48,7 @@ export default function SettingsPage() {
   const [newPlanName, setNewPlanName] = useState('')
   const [creating, setCreating] = useState(false)
   const [shareModalOpen, setShareModalOpen] = useState(false)
-  const [selectedPlan, setSelectedPlan] = useState<{ id: string; name: string } | null>(null)
-  const [copiedToken, setCopiedToken] = useState<string | null>(null)
+  const [selectedPlan, setSelectedPlan] = useState<{ id: string; name: string; is_public: boolean; share_token: string | null } | null>(null)
 
   useEffect(() => {
     loadUserData()
@@ -240,55 +238,14 @@ export default function SettingsPage() {
     }
   }
 
-  const togglePublic = async (plan: MealPlan) => {
-    if (!user) return
-
-    try {
-      const newIsPublic = !plan.is_public
-      let shareToken = plan.share_token
-
-      // Generate share token if making public and no token exists
-      if (newIsPublic && !shareToken) {
-        // Generate a random 12-character token
-        const chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-        shareToken = Array.from({ length: 12 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-        console.log('Generated share token:', shareToken)
-      }
-
-      const { data: updateData, error } = await supabase
-        .from('meal_plans')
-        .update({
-          is_public: newIsPublic,
-          share_token: shareToken,
-        })
-        .eq('id', plan.id)
-        .eq('user_id', user.id)
-        .select()
-
-      console.log('Update public status result:', { updateData, error, newIsPublic, shareToken })
-
-      if (error) {
-        console.error('Error updating plan:', error)
-        throw error
-      }
-
-      // Update local state
-      setMyPlans(myPlans.map(p =>
-        p.id === plan.id
-          ? { ...p, is_public: newIsPublic, share_token: shareToken }
-          : p
-      ))
-    } catch (err) {
-      console.error('Error toggling public:', err)
-      alert('Failed to update plan visibility')
-    }
-  }
-
-  const copyPublicLink = (token: string) => {
-    const url = `${window.location.origin}/plan/share/${token}`
-    navigator.clipboard.writeText(url)
-    setCopiedToken(token)
-    setTimeout(() => setCopiedToken(null), 2000)
+  const handlePlanVisibilityChange = (planId: string, isPublic: boolean, shareToken: string | null) => {
+    setMyPlans((prev) => prev.map((plan) => (
+      plan.id === planId ? { ...plan, is_public: isPublic, share_token: shareToken } : plan
+    )))
+    setSelectedPlan((prev) => {
+      if (!prev || prev.id !== planId) return prev
+      return { ...prev, is_public: isPublic, share_token: shareToken }
+    })
   }
 
   if (loading) {
@@ -316,18 +273,16 @@ export default function SettingsPage() {
         <Card className="mb-6">
           <CardHeader>
             <CardTitle>Profile</CardTitle>
-            <CardDescription>Your account information</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label>Email</Label>
-              <Input value={user?.email || ''} disabled className="mt-1" />
-            </div>
+          <CardContent className="pt-0">
+            <p className="text-sm text-gray-600">
+              Email: <span className="font-medium text-gray-900">{user?.email}</span>
+            </p>
           </CardContent>
         </Card>
 
         {/* My Plans Section */}
-        <Card>
+        <Card className="mb-6">
           <CardHeader>
             <CardTitle>My Plans</CardTitle>
             <CardDescription>
@@ -342,37 +297,51 @@ export default function SettingsPage() {
                   key={plan.id}
                   className="p-3 border rounded-lg hover:bg-gray-50"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{plan.name}</span>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        className="font-medium text-orange-600 hover:underline"
+                        onClick={() => router.push(`/plan?id=${plan.id}`)}
+                      >
+                        {plan.name}
+                      </button>
                       {defaultPlanId === plan.id && (
                         <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full flex items-center gap-1">
                           <Star className="h-3 w-3 fill-current" />
-                          Default
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <Switch
+                          checked={defaultPlanId === plan.id}
+                          onCheckedChange={(checked) => {
+                            if (checked && defaultPlanId !== plan.id) {
+                              setAsDefault(plan.id)
+                            }
+                          }}
+                        />
+                        <span className="text-sm text-gray-600">Default</span>
+                      </div>
                       <Button
-                        variant="outline"
+                        variant="ghost"
                         size="sm"
                         onClick={() => {
-                          setSelectedPlan({ id: plan.id, name: plan.name })
+                          setSelectedPlan({ id: plan.id, name: plan.name, is_public: plan.is_public, share_token: plan.share_token })
                           setShareModalOpen(true)
                         }}
                       >
                         <Share2 className="h-4 w-4 mr-1" />
                         Share
                       </Button>
-                      {defaultPlanId !== plan.id && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setAsDefault(plan.id)}
-                        >
-                          Set as Default
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => router.push(`/plan?id=${plan.id}`)}
+                      >
+                        Open
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
@@ -385,44 +354,13 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Public Link Section */}
-                  <div className="flex items-center justify-between pt-2 border-t">
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        checked={plan.is_public}
-                        onCheckedChange={() => togglePublic(plan)}
-                      />
-                      <Label className="text-sm font-normal cursor-pointer" onClick={() => togglePublic(plan)}>
-                        Public link
-                      </Label>
-                    </div>
-                    {plan.is_public && plan.share_token && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => copyPublicLink(plan.share_token!)}
-                      >
-                        {copiedToken === plan.share_token ? (
-                          <>
-                            <Check className="h-4 w-4 mr-1" />
-                            Copied!
-                          </>
-                        ) : (
-                          <>
-                            <Copy className="h-4 w-4 mr-1" />
-                            Copy Link
-                          </>
-                        )}
-                      </Button>
-                    )}
-                  </div>
                 </div>
               ))}
             </div>
 
             {/* Create New Plan */}
             {myPlans.length < 3 && (
-              <div className="pt-4 border-t">
+              <div className="pt-4">
                 <div className="flex gap-2">
                   <Input
                     placeholder="New plan name..."
@@ -447,7 +385,7 @@ export default function SettingsPage() {
             )}
 
             {myPlans.length >= 3 && (
-              <p className="text-sm text-gray-500 pt-4 border-t">
+              <p className="text-sm text-gray-500 pt-4">
                 You've reached the maximum of 3 plans. Delete a plan to create a new one.
               </p>
             )}
@@ -476,7 +414,13 @@ export default function SettingsPage() {
                   >
                     <div className="flex items-center gap-2">
                       <div>
-                        <span className="font-medium">{share.meal_plans.name}</span>
+                        <button
+                          type="button"
+                          className="font-medium text-orange-600 hover:underline"
+                          onClick={() => router.push(`/plan?id=${share.plan_id}`)}
+                        >
+                          {share.meal_plans.name}
+                        </button>
                         <p className="text-xs text-gray-500">
                           {share.permission === 'edit' ? 'Can edit' : 'View only'}
                         </p>
@@ -484,27 +428,21 @@ export default function SettingsPage() {
                       {defaultPlanId === share.plan_id && (
                         <span className="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full flex items-center gap-1">
                           <Star className="h-3 w-3 fill-current" />
-                          Default
                         </span>
                       )}
                     </div>
-                    <div className="flex items-center gap-2">
-                      {defaultPlanId !== share.plan_id && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setAsDefault(share.plan_id)}
-                        >
-                          Set as Default
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => router.push(`/plan?id=${share.plan_id}`)}
-                      >
-                        View Plan
-                      </Button>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <div className="flex items-center gap-1">
+                        <Switch
+                          checked={defaultPlanId === share.plan_id}
+                          onCheckedChange={(checked) => {
+                            if (checked && defaultPlanId !== share.plan_id) {
+                              setAsDefault(share.plan_id)
+                            }
+                          }}
+                        />
+                        <span className="text-sm text-gray-600">Default</span>
+                      </div>
                     </div>
                   </div>
                 )
@@ -523,6 +461,11 @@ export default function SettingsPage() {
             }}
             planId={selectedPlan.id}
             planName={selectedPlan.name}
+            planIsPublic={selectedPlan.is_public}
+            planShareToken={selectedPlan.share_token}
+            onVisibilityChange={({ isPublic, shareToken }) =>
+              handlePlanVisibilityChange(selectedPlan.id, isPublic, shareToken)
+            }
           />
         )}
       </div>
